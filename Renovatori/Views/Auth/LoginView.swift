@@ -8,6 +8,9 @@ struct LoginView: View {
     @State private var password = ""
     @State private var errorMessage: String?
     @State private var isSubmitting = false
+    @State private var isShowingForgotPassword = false
+    /// Shown after a successful password reset.
+    @State private var infoMessage: String?
 
     var body: some View {
         Form {
@@ -26,10 +29,20 @@ struct LoginView: View {
                         .onSubmit(submit)
                 }
             } footer: {
-                if let errorMessage {
-                    FormErrorBanner(message: errorMessage)
-                        .padding(.top, 4)
+                VStack(alignment: .leading, spacing: 8) {
+                    if let errorMessage {
+                        FormErrorBanner(message: errorMessage)
+                    } else if let infoMessage {
+                        Label(infoMessage, systemImage: "checkmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.green)
+                    }
+                    Button("დაგავიწყდათ პაროლი?") {
+                        isShowingForgotPassword = true
+                    }
+                    .font(.footnote.weight(.semibold))
                 }
+                .padding(.top, 4)
             }
 
             Section {
@@ -46,6 +59,16 @@ struct LoginView: View {
         }
         .navigationTitle("შესვლა")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $isShowingForgotPassword) {
+            ForgotPasswordView(email: email) { resetEmail in
+                // Back to this form, ready to sign in with the new password.
+                email = resetEmail
+                password = ""
+                errorMessage = nil
+                infoMessage = "პაროლი შეიცვალა. შედით ახალი პაროლით."
+                isShowingForgotPassword = false
+            }
+        }
     }
 
     private func submit() {
@@ -56,6 +79,7 @@ struct LoginView: View {
         }
 
         errorMessage = nil
+        infoMessage = nil
         isSubmitting = true
         Task {
             defer { isSubmitting = false }

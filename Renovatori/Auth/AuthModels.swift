@@ -50,3 +50,28 @@ struct MeResponse: Decodable {
 struct LogoutResponse: Decodable {
     let loggedOut: Bool
 }
+
+struct PasswordResetRequest: Encodable {
+    let email: String
+}
+
+struct PasswordResetConfirmRequest: Encodable {
+    let email, code, password: String
+}
+
+struct EmailVerificationRequest: Encodable {
+    let code: String
+}
+
+struct PasswordChangeRequest: Encodable {
+    let currentPassword, newPassword, confirmPassword, device: String
+}
+
+/// `{ sent: true }` from the reset-request and resend endpoints.
+struct SentResponse: Decodable {
+    let sent: Bool
+}
+
+struct PasswordResetResponse: Decodable {
+    let passwordReset: Bool
+}

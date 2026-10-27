@@ -3,4 +3,4 @@ firstName=Test
 lastName=Simulator
 phoneNumber=555000111
 email=ios-test-1792945992@example.com
-password=HvAThMXAkjem
+password=0N3xLMAuC6NC

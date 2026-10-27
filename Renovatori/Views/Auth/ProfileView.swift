@@ -54,6 +54,22 @@ struct ProfileView: View {
                 }
             }
 
+            Section("უსაფრთხოება") {
+                if !user.isVerified {
+                    NavigationLink(value: AppRoute.emailVerification) {
+                        Label {
+                            Text("ელ-ფოსტის დადასტურება")
+                        } icon: {
+                            Image(systemName: "envelope.badge")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+                NavigationLink(value: AppRoute.passwordChange) {
+                    Label("პაროლის შეცვლა", systemImage: "key")
+                }
+            }
+
             Section {
                 Button(role: .destructive) {
                     isConfirmingLogout = true

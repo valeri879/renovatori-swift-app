@@ -91,6 +91,63 @@ final class AuthViewModel: ObservableObject {
         state = .unauthenticated
     }
 
+    // MARK: Password reset (signed out)
+
+    /// Emails a reset code. The server answers the same way for unknown emails.
+    func requestPasswordReset(email: String) async throws {
+        _ = try await client.send(
+            Endpoint(method: .post, path: "auth/password-reset/request", body: PasswordResetRequest(email: email)),
+            as: SentResponse.self
+        )
+    }
+
+    /// Sets a new password with the emailed code. The server revokes every session, so the user signs in again.
+    func confirmPasswordReset(email: String, code: String, password: String) async throws {
+        _ = try await client.send(
+            Endpoint(
+                method: .post,
+                path: "auth/password-reset/confirm",
+                body: PasswordResetConfirmRequest(email: email, code: code, password: password)
+            ),
+            as: PasswordResetResponse.self
+        )
+    }
+
+    // MARK: Account (signed in)
+
+    func verifyEmail(code: String) async throws {
+        let response: MeResponse = try await client.send(Endpoint(
+            method: .post,
+            path: "auth/email-verification",
+            body: EmailVerificationRequest(code: code),
+            requiresAuth: true
+        ))
+        state = .authenticated(response.user)
+    }
+
+    func resendVerificationCode() async throws {
+        _ = try await client.send(
+            Endpoint(method: .post, path: "auth/email-verification/resend", requiresAuth: true),
+            as: SentResponse.self
+        )
+    }
+
+    /// Changes the password. The server signs out other devices and returns a fresh pair for this one.
+    func changePassword(current: String, new: String, confirmation: String) async throws {
+        let bundle: TokenBundle = try await client.send(Endpoint(
+            method: .post,
+            path: "auth/password-change",
+            body: PasswordChangeRequest(
+                currentPassword: current,
+                newPassword: new,
+                confirmPassword: confirmation,
+                device: UIDevice.current.name
+            ),
+            requiresAuth: true
+        ))
+        signIn(with: bundle)
+    }
+
     private func signIn(with bundle: TokenBundle) {
         tokenStore.save(accessToken: bundle.accessToken, refreshToken: bundle.refreshToken)
         state = .authenticated(bundle.user)

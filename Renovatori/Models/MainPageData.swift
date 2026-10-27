@@ -31,6 +31,8 @@ enum AppRoute: Hashable {
     /// Booking form, preselected with a package name from `ConsultationPageData.packages`.
     case consultationOrder(String)
     case contact
+    case emailVerification
+    case passwordChange
 }
 
 struct NavItem: Identifiable {

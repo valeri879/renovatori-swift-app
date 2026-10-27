@@ -87,6 +87,10 @@ struct HomeView: View {
                     ConsultationOrderView(consultationType: consultationType)
                 case .contact:
                     ContactView()
+                case .emailVerification:
+                    EmailVerificationView()
+                case .passwordChange:
+                    PasswordChangeView()
                 }
             }
         }
@@ -114,8 +118,8 @@ struct HomeView: View {
                     path.append(destination)
                 }
             } else if newID == nil {
-                // Logged out (or the session expired): leave the profile screen.
-                path.removeAll { $0 == .profile }
+                // Logged out (or the session expired): leave the screens that need an account.
+                path.removeAll { [.profile, .emailVerification, .passwordChange].contains($0) }
             }
         }
     }
