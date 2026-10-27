@@ -1,8 +1,9 @@
 import Foundation
 
 /// Loads a paginated list endpoint page by page and appends as the user scrolls.
+/// `Item` is `Sendable` so its `Decodable` conformance can be used inside the `APIClient` actor.
 @MainActor
-final class PagedList<Item: Decodable & Identifiable>: ObservableObject {
+final class PagedList<Item: Decodable & Identifiable & Sendable>: ObservableObject {
     @Published private(set) var items: [Item] = []
     @Published private(set) var isLoading = false
     /// Error of the last request; shown full-screen when there are no items yet.
@@ -10,7 +11,7 @@ final class PagedList<Item: Decodable & Identifiable>: ObservableObject {
 
     private let path: String
     private let pageSize: Int
-    private let requiresAuth: Bool
+    private var requiresAuth: Bool
     private var extraQuery: [URLQueryItem]
     private var pagination: Pagination?
     private var hasLoaded = false
@@ -41,10 +42,14 @@ final class PagedList<Item: Decodable & Identifiable>: ObservableObject {
         items.removeAll { $0.id == id }
     }
 
-    /// Replaces the list with page 1 (pull-to-refresh, sort change, retry).
-    func reload(query: [URLQueryItem]? = nil) async {
+    /// Replaces the list with page 1 (pull-to-refresh, sort change, retry). `requiresAuth` switches
+    /// whether the token is sent, for public lists that show signed-in users more.
+    func reload(query: [URLQueryItem]? = nil, requiresAuth: Bool? = nil) async {
         if let query {
             extraQuery = query
+        }
+        if let requiresAuth {
+            self.requiresAuth = requiresAuth
         }
         await load(page: 1, replacing: true)
     }

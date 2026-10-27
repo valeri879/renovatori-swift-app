@@ -6,7 +6,11 @@ email=ios-test-1792945992@example.com
 password=0N3xLMAuC6NC
 
 # LOCAL staff test accounts (isAdmin / isModerator), created for the admin expenses API.
-admin.email=ios-admin-1793087200054@example.com
-admin.password=RBgmGbexg6mI
-moderator.email=ios-moderator-1793087200054@example.com
-moderator.password=MpoFIE6Q65Sp
+admin.email=ios-admin-1793127212@example.com
+admin.password=KrGKrCz6mx4q
+moderator.email=ios-moderator-1793127212@example.com
+moderator.password=ZBEbsodNsnG1
+
+# LOCAL client test account (linked to throwaway projects in API tests).
+client.email=ios-client-1793129671@example.com
+client.password=dPtcqv6Ln5ab

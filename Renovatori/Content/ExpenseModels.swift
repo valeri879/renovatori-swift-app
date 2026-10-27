@@ -179,6 +179,27 @@ struct PaidAmountRequest: Encodable {
     let sendClientEmail: Bool
 }
 
+/// Body of `POST /admin/expenses` and `PUT /admin/expenses/:id` (the web add/edit project form).
+/// Empty ids and an empty dollar total mean "not set".
+struct ExpenseProjectRequest: Encodable {
+    let projectName: String
+    let projectStatus: String
+    let publicProjectId: String
+    let totalAmount: Double
+    let totalAmountDollar: Double?
+    let area: Double
+    /// `YYYY-MM-DD`.
+    let startDate: String
+    /// `YYYY-MM-DD`.
+    let endDate: String
+    let projectAddress: String
+    let clientName: String
+    let clientPhone: String
+    let clientEmail: String
+    let clientId: String
+    let sendTelegramNotification: Bool
+}
+
 struct PaidAmountResponse: Decodable {
     let expense: ExpenseDetail
     let clientEmailSent: Bool

@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Admin "ხარჯები" list (`views/pages/expenses-list-page`): status filter, endless paging, a tap
-/// opens the project and, for admins only, delete with confirmation. Moderators only read.
+/// opens the project and, for admins only, „+" adds a project and swipe deletes one with confirmation.
+/// Moderators only read.
 struct ExpensesListView: View {
     @EnvironmentObject private var auth: AuthViewModel
     @StateObject private var list = PagedList<ExpenseCard>(path: "admin/expenses", pageSize: 20, requiresAuth: true)
@@ -12,10 +13,12 @@ struct ExpensesListView: View {
     @State private var pendingDelete: ExpenseCard?
     @State private var deletingID: ExpenseCard.ID?
     @State private var deleteError: String?
+    @State private var isAddingProject = false
     /// Set after the first appearance, so coming back from a project refreshes its numbers.
     @State private var hasAppeared = false
 
-    private var canDelete: Bool { auth.currentUser?.isAdmin == true }
+    /// Admins add and delete projects; moderators only read.
+    private var isAdmin: Bool { auth.currentUser?.isAdmin == true }
 
     var body: some View {
         content
@@ -24,6 +27,23 @@ struct ExpensesListView: View {
             }
             .navigationTitle("ხარჯები")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if isAdmin {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("ხარჯის დამატება", systemImage: "plus") {
+                            isAddingProject = true
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $isAddingProject) {
+                NavigationStack {
+                    ExpenseProjectFormView { _ in
+                        // Newest first, so the new project is the first row.
+                        Task { await list.reload() }
+                    }
+                }
+            }
             .task {
                 await loadStatuses()
                 await list.loadIfNeeded()
@@ -88,7 +108,7 @@ struct ExpensesListView: View {
                     .opacity(deletingID == expense.id ? 0.4 : 1)
                     .task { await list.loadMoreIfNeeded(after: expense) }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        if canDelete {
+                        if isAdmin {
                             Button("წაშლა", systemImage: "trash", role: .destructive) {
                                 pendingDelete = expense
                             }

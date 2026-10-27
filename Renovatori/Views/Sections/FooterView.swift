@@ -3,6 +3,7 @@ import SwiftUI
 /// Page links, theme picker, credits and version.
 struct FooterView: View {
     @AppStorage(ThemePreference.storageKey) private var theme: ThemePreference = .system
+    @AppStorage(APIEnvironment.storageKey) private var apiEnvironment: APIEnvironment = .local
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -29,6 +30,23 @@ struct FooterView: View {
                 }
             }
             .pickerStyle(.segmented)
+
+            #if DEBUG
+            // Temporary: switches the backend between the local server and renovatori.ge.
+            Toggle(isOn: Binding(
+                get: { apiEnvironment == .production },
+                set: { apiEnvironment = $0 ? .production : .local }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("პროდაქშენის ბაზა")
+                    Text(APIConfig.origin.absoluteString)
+                        .font(.caption)
+                        .monospaced()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .tint(.red)
+            #endif
 
             VStack(spacing: 4) {
                 Text("პროგრამულ მხარდაჭერას უზრუნველყოფს [Val Do](https://val-do.com)")

@@ -91,6 +91,13 @@ final class AuthViewModel: ObservableObject {
         state = .unauthenticated
     }
 
+    /// After the footer switches backends: the stored tokens belong to the other server, so drop them
+    /// without calling `/auth/logout` (that request would now go to the wrong backend).
+    func forgetSessionForEnvironmentChange() {
+        tokenStore.clear()
+        state = .unauthenticated
+    }
+
     // MARK: Password reset (signed out)
 
     /// Emails a reset code. The server answers the same way for unknown emails.

@@ -1,24 +1,27 @@
 import PhotosUI
 import SwiftUI
 
-/// "ხარჯის ჩანაწერის დამატება" (`views/pages/expenses-add-expense-page`), sent as multipart to
-/// `POST /admin/expenses/:id/expenses` so photos can go with it.
-struct AddExpenseItemView: View {
+/// "ხარჯის ჩანაწერის დამატება / რედაქტირება" (`views/pages/expenses-add-expense-page`,
+/// `expenses-edit-expense-page`), sent as multipart to `POST /admin/expenses/:id/expenses` or
+/// `PUT /admin/expenses/:id/expenses/:entryId` so photos can go with it.
+struct ExpenseItemFormView: View {
     private enum Field: String {
         case expenseType, expenseDate, amount, comment
     }
 
     let expense: ExpenseDetail
+    /// The row being edited; nil adds a new one.
+    let item: ExpenseDetail.Item?
     let onSaved: (ExpenseDetail) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     @State private var expenseTypes: [ExpenseTypeOption] = []
     /// Empty string means "no type", like the web's empty option.
-    @State private var expenseTypeID = ""
-    @State private var expenseDate = Date()
-    @State private var amount = ""
-    @State private var comment = ""
+    @State private var expenseTypeID: String
+    @State private var expenseDate: Date
+    @State private var amount: String
+    @State private var comment: String
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var photos: [SelectedPhoto] = []
     @State private var sendTelegram = false
@@ -26,6 +29,17 @@ struct AddExpenseItemView: View {
     @State private var fieldErrors: [Field: String] = [:]
     @State private var errorMessage: String?
     @State private var isSubmitting = false
+
+    init(expense: ExpenseDetail, item: ExpenseDetail.Item? = nil, onSaved: @escaping (ExpenseDetail) -> Void) {
+        self.expense = expense
+        self.item = item
+        self.onSaved = onSaved
+        _expenseTypeID = State(initialValue: item?.expenseType?.id ?? "")
+        _expenseDate = State(initialValue: item?.expenseDate ?? Date())
+        // Whole amounts without a trailing ".0", like the web's number input.
+        _amount = State(initialValue: item.map { PaidAmountFormView.inputText($0.amount) } ?? "")
+        _comment = State(initialValue: item?.comment ?? "")
+    }
 
     var body: some View {
         Form {
@@ -57,6 +71,17 @@ struct AddExpenseItemView: View {
             }
 
             Section {
+                if let existing = item?.images, !existing.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(existing.enumerated()), id: \.offset) { _, image in
+                                RemoteImage(url: APIConfig.imageURL(image.thumbUrl))
+                                    .frame(width: 72, height: 54)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                        }
+                    }
+                }
                 PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .images) {
                     Label(photos.isEmpty ? "სურათების დამატება" : "სურათების შეცვლა", systemImage: "photo.on.rectangle.angled")
                 }
@@ -86,7 +111,7 @@ struct AddExpenseItemView: View {
             } header: {
                 Text("სურათები")
             } footer: {
-                Text("ატვირთვა არ არის სავალდებულო.")
+                Text(item == nil ? "ატვირთვა არ არის სავალდებულო." : "ახალი სურათები არსებულს დაემატება.")
             }
 
             Section {
@@ -99,10 +124,10 @@ struct AddExpenseItemView: View {
             }
 
             Section {
-                SubmitButton(title: "დამატება", isLoading: isSubmitting, action: submit)
+                SubmitButton(title: item == nil ? "დამატება" : "შენახვა", isLoading: isSubmitting, action: submit)
             }
         }
-        .navigationTitle("ხარჯის დამატება")
+        .navigationTitle(item == nil ? "ხარჯის დამატება" : "ხარჯის რედაქტირება")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -178,8 +203,8 @@ struct AddExpenseItemView: View {
             defer { isSubmitting = false }
             do {
                 let response: ExpenseDetailResponse = try await APIClient.shared.send(Endpoint(
-                    method: .post,
-                    path: "admin/expenses/\(expense.id)/expenses",
+                    method: item == nil ? .post : .put,
+                    path: item.map { "admin/expenses/\(expense.id)/expenses/\($0.id)" } ?? "admin/expenses/\(expense.id)/expenses",
                     form: form,
                     requiresAuth: true
                 ))
@@ -201,27 +226,47 @@ struct AddExpenseItemView: View {
     }
 }
 
-/// "ჩარიცხვის დამატება" (`views/pages/expenses-add-paid-amount-page`) → `POST /admin/expenses/:id/paid-amounts`.
-struct AddPaidAmountView: View {
+/// "ჩარიცხვის დამატება / რედაქტირება" (`views/pages/expenses-add-paid-amount-page`,
+/// `expenses-edit-paid-amount-page`) → `POST /admin/expenses/:id/paid-amounts` or
+/// `PUT /admin/expenses/:id/paid-amounts/:paidAmountId`.
+struct PaidAmountFormView: View {
     private enum Field: String {
         case paidAmount, paidAmountDollar, paidAt, comment
     }
 
     let expense: ExpenseDetail
+    /// The payment being edited; nil adds a new one.
+    let payment: ExpenseDetail.PaidAmount?
     let onSaved: (ExpenseDetail, _ clientEmailSent: Bool) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var paidAmount = ""
-    @State private var paidAmountDollar = ""
-    @State private var paidAt = Date()
-    @State private var comment = ""
+    @State private var paidAmount: String
+    @State private var paidAmountDollar: String
+    @State private var paidAt: Date
+    @State private var comment: String
     @State private var sendTelegram = false
     @State private var sendClientEmail = false
 
     @State private var fieldErrors: [Field: String] = [:]
     @State private var errorMessage: String?
     @State private var isSubmitting = false
+
+    init(expense: ExpenseDetail, payment: ExpenseDetail.PaidAmount? = nil, onSaved: @escaping (ExpenseDetail, _ clientEmailSent: Bool) -> Void) {
+        self.expense = expense
+        self.payment = payment
+        self.onSaved = onSaved
+        _paidAmount = State(initialValue: payment.map { Self.inputText($0.paidAmount) } ?? "")
+        // A zero dollar amount means "not given", so the field starts empty.
+        _paidAmountDollar = State(initialValue: payment.flatMap { $0.paidAmountDollar > 0 ? Self.inputText($0.paidAmountDollar) : nil } ?? "")
+        _paidAt = State(initialValue: payment?.paidAt ?? Date())
+        _comment = State(initialValue: payment?.comment ?? "")
+    }
+
+    /// Whole amounts without a trailing ".0", like the web's number input.
+    fileprivate static func inputText(_ value: Double) -> String {
+        value.rounded() == value ? String(Int(value)) : String(value)
+    }
 
     var body: some View {
         Form {
@@ -260,10 +305,10 @@ struct AddPaidAmountView: View {
             }
 
             Section {
-                SubmitButton(title: "დამატება", isLoading: isSubmitting, action: submit)
+                SubmitButton(title: payment == nil ? "დამატება" : "შენახვა", isLoading: isSubmitting, action: submit)
             }
         }
-        .navigationTitle("ჩარიცხვის დამატება")
+        .navigationTitle(payment == nil ? "ჩარიცხვის დამატება" : "ჩარიცხვის რედაქტირება")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -308,8 +353,8 @@ struct AddPaidAmountView: View {
             defer { isSubmitting = false }
             do {
                 let response: PaidAmountResponse = try await APIClient.shared.send(Endpoint(
-                    method: .post,
-                    path: "admin/expenses/\(expense.id)/paid-amounts",
+                    method: payment == nil ? .post : .put,
+                    path: payment.map { "admin/expenses/\(expense.id)/paid-amounts/\($0.id)" } ?? "admin/expenses/\(expense.id)/paid-amounts",
                     body: request,
                     requiresAuth: true
                 ))
@@ -331,8 +376,8 @@ struct AddPaidAmountView: View {
     }
 }
 
-/// The project the entry is added to (the web's `expenseContextCard` mixin).
-private struct ExpenseContextSection: View {
+/// The project the entry is added to or edited (the web's `expenseContextCard` mixin).
+struct ExpenseContextSection: View {
     let expense: ExpenseDetail
 
     var body: some View {
@@ -358,7 +403,7 @@ private struct ExpenseContextSection: View {
 }
 
 /// A photo picked for upload: a small preview plus a downscaled JPEG to send.
-private struct SelectedPhoto: Identifiable {
+struct SelectedPhoto: Identifiable {
     let id = UUID()
     let preview: UIImage
     let jpegData: Data

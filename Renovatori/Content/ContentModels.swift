@@ -15,6 +15,8 @@ struct ProjectSummary: Decodable, Identifiable, Hashable {
     let endDate: Date?
     let coverImageUrl: String?
     let updatedAt: Date?
+    /// Staff lists include drafts; nil from backends that list only published projects.
+    let isPublished: Bool?
 }
 
 /// `GET /projects/:id` → `{ project }`.
@@ -36,10 +38,83 @@ struct ProjectDetail: Decodable, Identifiable, Hashable {
     let images: [Image]
     let createdAt: Date?
     let updatedAt: Date?
+    /// Sent only by the backend version with viewer extras; nil means published.
+    let isPublished: Bool?
+    /// Linked client account; prefills the history form's client id.
+    let clientId: String?
 }
 
+/// `GET /projects/:id` → `{ project, access, client, financialSummary, history }`. A signed-in request
+/// adds what the web project page shows that user; guests (and older backends) get only `project`.
 struct ProjectDetailResponse: Decodable {
+    struct Access: Decodable, Hashable {
+        /// Admins, moderators and the linked client: dates, client contact, finances.
+        let canViewClientInfo: Bool
+        /// Admins and the linked client.
+        let canViewHistory: Bool
+        /// Admins: add, edit and delete history entries.
+        let canManage: Bool
+
+        static let guest = Access(canViewClientInfo: false, canViewHistory: false, canManage: false)
+    }
+
+    struct Client: Decodable, Hashable {
+        let firstName: String
+        let lastName: String
+        let email: String
+        let phoneNumber: String
+    }
+
+    /// The expense project linked to this public project and client, in dollars (as on the web).
+    struct FinancialSummary: Decodable, Hashable {
+        struct Payment: Decodable, Hashable, Identifiable {
+            let id: String
+            let paidAmountDollar: Double
+            let paidAt: Date?
+        }
+
+        let totalAmountDollar: Double
+        let remainingAmountDollar: Double
+        let totalPaidAmountDollar: Double
+        let paidAmounts: [Payment]
+        let progress: ExpenseCard.Progress
+    }
+
     let project: ProjectDetail
+    let access: Access
+    let client: Client?
+    let financialSummary: FinancialSummary?
+    let history: [ProjectHistoryEntry]
+
+    private enum CodingKeys: String, CodingKey {
+        case project, access, client, financialSummary, history
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        project = try container.decode(ProjectDetail.self, forKey: .project)
+        access = try container.decodeIfPresent(Access.self, forKey: .access) ?? .guest
+        client = try container.decodeIfPresent(Client.self, forKey: .client)
+        financialSummary = try container.decodeIfPresent(FinancialSummary.self, forKey: .financialSummary)
+        history = try container.decodeIfPresent([ProjectHistoryEntry].self, forKey: .history) ?? []
+    }
+}
+
+/// One "პროექტის ისტორია" entry (`serializeProjectHistory` on the backend).
+struct ProjectHistoryEntry: Decodable, Hashable, Identifiable {
+    let id: String
+    let comment: String
+    let timestamp: Date?
+    /// The client the entry is addressed to; the client sees only their own entries.
+    let clientId: String?
+    let images: [ProjectDetail.Image]
+}
+
+/// `POST /admin/projects/:id/history`, `PUT` / `DELETE /admin/project-history/:id` → every entry of the project.
+struct ProjectHistoryResponse: Decodable {
+    let history: [ProjectHistoryEntry]
+    /// Absent on delete.
+    let clientEmailSent: Bool?
 }
 
 /// Card in `GET /blog`.

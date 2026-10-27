@@ -1,17 +1,53 @@
 import SwiftUI
 
 /// Admin expense project (`views/pages/expenses-detail-page`): finances, progress, spending by type,
-/// payments and expense rows. Admins can add expenses and payments while the project is „მიმდინარე".
+/// payments and expense rows. Admins can add expenses and payments while the project is „მიმდინარე",
+/// and edit or delete expense rows and payments in any status.
 struct ExpenseDetailView: View {
     let id: String
 
-    private enum Sheet: String, Identifiable {
-        case addExpense, addPayment
-        var id: String { rawValue }
+    private enum Sheet: Identifiable {
+        case editProject, addExpense, addPayment
+        case editExpense(ExpenseDetail.Item)
+        case editPayment(ExpenseDetail.PaidAmount)
+
+        var id: String {
+            switch self {
+            case .editProject: "editProject"
+            case .addExpense: "addExpense"
+            case .addPayment: "addPayment"
+            case .editExpense(let item): "editExpense-\(item.id)"
+            case .editPayment(let payment): "editPayment-\(payment.id)"
+            }
+        }
+    }
+
+    /// A row waiting for the delete confirmation.
+    private enum PendingDelete {
+        case expense(ExpenseDetail.Item)
+        case payment(ExpenseDetail.PaidAmount)
+
+        var id: String {
+            switch self {
+            case .expense(let item): item.id
+            case .payment(let payment): payment.id
+            }
+        }
+
+        var question: String {
+            switch self {
+            case .expense: "ნამდვილად გსურთ ხარჯის ჩანაწერის წაშლა? ეს ოპერაცია შეუქცევადია."
+            case .payment: "ნამდვილად გსურთ ჩარიცხვის წაშლა? ეს ოპერაცია შეუქცევადია."
+            }
+        }
     }
 
     @State private var state: Loadable<ExpenseDetail> = .loading
     @State private var sheet: Sheet?
+    @State private var pendingDelete: PendingDelete?
+    /// Row (expense or payment) whose delete request is in flight.
+    @State private var deletingID: String?
+    @State private var deleteError: String?
     /// Expense-type filter for the rows, set by tapping a type in the breakdown.
     @State private var selectedType: String?
     @State private var notice: String?
@@ -38,29 +74,48 @@ struct ExpenseDetailView: View {
 
     // MARK: Layout
 
+    /// A `List` (not a `ScrollView`) so payment and expense rows can have swipe actions.
+    /// The top blocks are clear, inset-free rows, so they keep the card layout.
     private func detail(_ expense: ExpenseDetail) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                header(expense)
-                if let notice {
-                    Label(notice, systemImage: "checkmark.circle.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.green)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-                        .transition(.opacity)
+        List {
+            Section {
+                Group {
+                    header(expense)
+                    if let notice {
+                        Label(notice, systemImage: "checkmark.circle.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.green)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                            .transition(.opacity)
+                    }
+                    finances(expense)
+                    projectInfo(expense)
+                    progress(expense)
+                    typeBreakdown(expense)
                 }
-                finances(expense)
-                projectInfo(expense)
-                progress(expense)
-                typeBreakdown(expense)
-                payments(expense)
-                expenseRows(expense)
+                .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
-            .padding()
+            payments(expense)
+            expenseRows(expense)
         }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(20)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemBackground))
         .refreshable { await load() }
+        .toolbar {
+            if expense.permissions.canManage {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("რედაქტირება", systemImage: "pencil") {
+                        sheet = .editProject
+                    }
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             if expense.permissions.canManage {
                 actionBar(expense)
@@ -69,19 +124,46 @@ struct ExpenseDetailView: View {
         .sheet(item: $sheet) { sheet in
             NavigationStack {
                 switch sheet {
+                case .editProject:
+                    ExpenseProjectFormView(expense: expense) { updated in
+                        apply(updated, notice: "პროექტი განახლდა.")
+                    }
                 case .addExpense:
-                    AddExpenseItemView(expense: expense) { updated in
+                    ExpenseItemFormView(expense: expense) { updated in
                         apply(updated, notice: "ხარჯის ჩანაწერი დაემატა.")
                     }
+                case .editExpense(let item):
+                    ExpenseItemFormView(expense: expense, item: item) { updated in
+                        apply(updated, notice: "ხარჯის ჩანაწერი განახლდა.")
+                    }
                 case .addPayment:
-                    AddPaidAmountView(expense: expense) { updated, emailSent in
+                    PaidAmountFormView(expense: expense) { updated, emailSent in
                         apply(updated, notice: emailSent ? "ჩარიცხვა დაემატა. კლიენტს ელ-ფოსტა გაეგზავნა." : "ჩარიცხვა დაემატა.")
+                    }
+                case .editPayment(let payment):
+                    PaidAmountFormView(expense: expense, payment: payment) { updated, emailSent in
+                        apply(updated, notice: emailSent ? "ჩარიცხვა განახლდა. კლიენტს ელ-ფოსტა გაეგზავნა." : "ჩარიცხვა განახლდა.")
                     }
                 }
             }
         }
         .sheet(item: $viewerImages) { item in
             ImageViewer(item: item)
+        }
+        .confirmationDialog(
+            pendingDelete?.question ?? "",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDelete
+        ) { row in
+            Button("წაშლა", role: .destructive) {
+                Task { await delete(row, from: expense) }
+            }
+        }
+        .alert("წაშლა ვერ მოხერხდა", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("კარგი", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "")
         }
     }
 
@@ -216,7 +298,45 @@ struct ExpenseDetailView: View {
     }
 
     private func payments(_ expense: ExpenseDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        Section {
+            if expense.paidAmounts.isEmpty {
+                emptyRow("ჩარიცხვები ჯერ არ დამატებულა.")
+            } else {
+                ForEach(expense.paidAmounts) { payment in
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(payment.paidAmount.webMoney(fractionDigits: 2))
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.green)
+                            if payment.paidAmountDollar > 0 {
+                                Text(payment.paidAmountDollar.webMoney(fractionDigits: 2, currency: "$"))
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            }
+                            if !payment.comment.isEmpty {
+                                Text(payment.comment)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Text(payment.paidAt.map(Self.day) ?? "-")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if deletingID == payment.id {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .rowActions(
+                        enabled: expense.permissions.canManage,
+                        edit: { sheet = .editPayment(payment) },
+                        delete: { pendingDelete = .payment(payment) }
+                    )
+                }
+            }
+        } header: {
             HStack {
                 sectionTitle("💵 ჩარიცხვები")
                 Spacer()
@@ -224,82 +344,65 @@ struct ExpenseDetailView: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.green)
             }
-            if expense.paidAmounts.isEmpty {
-                emptyRow("ჩარიცხვები ჯერ არ დამატებულა.")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(expense.paidAmounts.enumerated()), id: \.element.id) { index, payment in
-                        if index > 0 { Divider() }
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(payment.paidAmount.webMoney(fractionDigits: 2))
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.green)
-                                if payment.paidAmountDollar > 0 {
-                                    Text(payment.paidAmountDollar.webMoney(fractionDigits: 2, currency: "$"))
-                                        .font(.caption)
-                                        .foregroundStyle(.green)
-                                }
-                                if !payment.comment.isEmpty {
-                                    Text(payment.comment)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Text(payment.paidAt.map(Self.day) ?? "-")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 10)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+            .listSectionHeader()
+        } footer: {
+            if !expense.paidAmounts.isEmpty {
                 Text("ჯამში ($): \(expense.totalPaidAmountDollar.webMoney(fractionDigits: 2, currency: "$"))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(Color(.secondarySystemBackground))
     }
 
     private func expenseRows(_ expense: ExpenseDetail) -> some View {
         let rows = expense.expenses.filter { selectedType == nil || $0.typeTitle == selectedType }
         let total = rows.reduce(0) { $0 + $1.amount }
 
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                sectionTitle("🧾 ხარჯები")
-                Spacer()
-                Text("ჯამი: \(total.webMoney(fractionDigits: 2))")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.red)
-            }
-            if let selectedType {
-                HStack {
-                    Text("ფილტრი: ").foregroundStyle(.secondary) + Text(selectedType).bold() + Text(" (\(rows.count))").foregroundStyle(.secondary)
-                    Spacer()
-                    Button("✕ მოხსნა") {
-                        withAnimation { self.selectedType = nil }
-                    }
-                }
-                .font(.footnote)
-            }
+        return Section {
             if rows.isEmpty {
                 emptyRow("ხარჯის ჩანაწერები ჯერ არ დამატებულა.")
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider() }
-                        ExpenseItemRow(item: item, number: index + 1) { tappedIndex in
-                            viewerImages = ImageViewerItem(images: item.images, startIndex: tappedIndex)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
+                    ExpenseItemRow(item: item, number: index + 1, isDeleting: deletingID == item.id) { tappedIndex in
+                        viewerImages = ImageViewerItem(images: item.images, startIndex: tappedIndex)
+                    }
+                    .rowActions(
+                        enabled: expense.permissions.canManage,
+                        edit: { sheet = .editExpense(item) },
+                        delete: { pendingDelete = .expense(item) }
+                    )
+                }
+            }
+        } header: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    sectionTitle("🧾 ხარჯები")
+                    Spacer()
+                    Text("ჯამი: \(total.webMoney(fractionDigits: 2))")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.red)
+                }
+                if let selectedType {
+                    HStack {
+                        Text("ფილტრი: ").foregroundStyle(.secondary) + Text(selectedType).bold() + Text(" (\(rows.count))").foregroundStyle(.secondary)
+                        Spacer()
+                        Button("✕ მოხსნა") {
+                            withAnimation { self.selectedType = nil }
                         }
                     }
+                    .font(.footnote)
                 }
-                .padding(.horizontal, 12)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .listSectionHeader()
+        } footer: {
+            if expense.permissions.canManage && !expense.expenses.isEmpty {
+                Text("რედაქტირებისთვის ან წასაშლელად გადაასრიალეთ ჩანაწერი მარცხნივ.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(Color(.secondarySystemBackground))
     }
 
     private func actionBar(_ expense: ExpenseDetail) -> some View {
@@ -359,8 +462,7 @@ struct ExpenseDetailView: View {
             .font(.footnote)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 8)
     }
 
     // MARK: Loading
@@ -381,6 +483,25 @@ struct ExpenseDetailView: View {
             state = .failed(error)
         } catch {
             state = .failed(.network)
+        }
+    }
+
+    private func delete(_ row: PendingDelete, from expense: ExpenseDetail) async {
+        let (path, notice) = switch row {
+        case .expense(let item): ("admin/expenses/\(expense.id)/expenses/\(item.id)", "ხარჯის ჩანაწერი წაიშალა.")
+        case .payment(let payment): ("admin/expenses/\(expense.id)/paid-amounts/\(payment.id)", "ჩარიცხვა წაიშალა.")
+        }
+        deletingID = row.id
+        defer { deletingID = nil }
+        do {
+            let response: ExpenseDetailResponse = try await APIClient.shared.send(
+                Endpoint(method: .delete, path: path, requiresAuth: true)
+            )
+            apply(response.expense, notice: notice)
+        } catch let error as APIError {
+            deleteError = error.message
+        } catch {
+            deleteError = APIError.network.message
         }
     }
 
@@ -461,6 +582,7 @@ private struct FinanceTile: View {
 private struct ExpenseItemRow: View {
     let item: ExpenseDetail.Item
     let number: Int
+    let isDeleting: Bool
     let openImage: (Int) -> Void
 
     var body: some View {
@@ -478,6 +600,10 @@ private struct ExpenseItemRow: View {
                 Text(item.expenseDate.map(ExpenseDetailView.day) ?? "-")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if isDeleting {
+                    ProgressView()
+                        .controlSize(.small)
+                }
             }
             if !item.comment.isEmpty {
                 Text(item.comment)
@@ -500,7 +626,37 @@ private struct ExpenseItemRow: View {
                 }
             }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 4)
+    }
+}
+
+extension View {
+    /// Right-to-left swipe with „რედაქტირება" and „წაშლა" on expense and payment rows (admins only).
+    /// Delete is tinted rather than `role: .destructive`, which would animate the row away
+    /// before the confirmation dialog is answered.
+    @ViewBuilder
+    fileprivate func rowActions(enabled: Bool, edit: @escaping () -> Void, delete: @escaping () -> Void) -> some View {
+        if enabled {
+            swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(action: delete) {
+                    Label("წაშლა", systemImage: "trash")
+                }
+                .tint(.red)
+                Button(action: edit) {
+                    Label("რედაქტირება", systemImage: "pencil")
+                }
+                .tint(.orange)
+            }
+        } else {
+            self
+        }
+    }
+
+    /// Section header styled like the other block titles instead of the grouped-list caps.
+    fileprivate func listSectionHeader() -> some View {
+        textCase(nil)
+            .foregroundStyle(.primary)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
     }
 }
 
