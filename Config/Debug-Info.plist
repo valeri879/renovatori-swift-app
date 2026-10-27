@@ -2,11 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Debug only: lets the app reach the local backend at http://localhost:3000. Release uses HTTPS. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>რენოვატორი უკავშირდება თქვენს კომპიუტერზე გაშვებულ სატესტო სერვერს ლოკალურ ქსელში.</string>
 </dict>
 </plist>

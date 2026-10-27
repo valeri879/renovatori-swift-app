@@ -54,6 +54,14 @@ struct ProfileView: View {
                 }
             }
 
+            if user.isStaff {
+                Section("ადმინისტრირება") {
+                    NavigationLink(value: AppRoute.expenses) {
+                        Label("ხარჯები", systemImage: "banknote")
+                    }
+                }
+            }
+
             Section("უსაფრთხოება") {
                 if !user.isVerified {
                     NavigationLink(value: AppRoute.emailVerification) {

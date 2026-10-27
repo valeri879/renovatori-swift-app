@@ -10,6 +10,9 @@ struct User: Codable, Identifiable, Equatable {
     /// Missing for some older accounts, so optional despite the API docs.
     let createdAt: Date?
 
+    /// Admins and moderators can open the admin screens; moderators only read.
+    var isStaff: Bool { isAdmin || isModerator }
+
     var fullName: String {
         [firstName, lastName].filter { !$0.isEmpty }.joined(separator: " ")
     }

@@ -4,7 +4,9 @@ import Foundation
 enum APIConfig {
     #if DEBUG
     /// Local backend. Reachable from the simulator; a real device needs the Mac's LAN IP or a tunnel.
-    static let origin = URL(string: "http://localhost:3000")!
+    /// Override with the `API_ORIGIN` launch environment variable (e.g. `http://192.168.1.10:3000`).
+    static let origin = ProcessInfo.processInfo.environment["API_ORIGIN"].flatMap(URL.init(string:))
+        ?? URL(string: "http://localhost:3000")!
     #else
     static let origin = URL(string: "https://renovatori.ge")!
     #endif

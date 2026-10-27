@@ -33,6 +33,18 @@ enum AppRoute: Hashable {
     case contact
     case emailVerification
     case passwordChange
+    /// Admin: expense projects (`/admin/expenses-list`). Staff only.
+    case expenses
+    /// Admin: one expense project. Staff only.
+    case expenseDetail(String)
+
+    /// Screens that need a signed-in account; they are closed when the session ends.
+    var requiresAccount: Bool {
+        switch self {
+        case .profile, .emailVerification, .passwordChange, .expenses, .expenseDetail: true
+        default: false
+        }
+    }
 }
 
 struct NavItem: Identifiable {

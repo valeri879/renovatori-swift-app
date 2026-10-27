@@ -56,6 +56,7 @@ struct HomeView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     MainMenu(
                         isSignedIn: auth.currentUser != nil,
+                        isStaff: auth.currentUser?.isStaff == true,
                         open: { route in path.append(route) },
                         signIn: { showSignIn(then: nil) }
                     )
@@ -91,6 +92,10 @@ struct HomeView: View {
                     EmailVerificationView()
                 case .passwordChange:
                     PasswordChangeView()
+                case .expenses:
+                    ExpensesListView()
+                case .expenseDetail(let id):
+                    ExpenseDetailView(id: id)
                 }
             }
         }
@@ -119,7 +124,7 @@ struct HomeView: View {
                 }
             } else if newID == nil {
                 // Logged out (or the session expired): leave the screens that need an account.
-                path.removeAll { [.profile, .emailVerification, .passwordChange].contains($0) }
+                path.removeAll(where: \.requiresAccount)
             }
         }
     }
@@ -141,6 +146,8 @@ enum HomeSection: Hashable {
 /// Items with a route open an in-app screen; the rest open renovatori.ge.
 private struct MainMenu: View {
     let isSignedIn: Bool
+    /// Admins and moderators also get the admin section (like the web's admin menu).
+    let isStaff: Bool
     let open: (AppRoute) -> Void
     let signIn: () -> Void
 
@@ -156,6 +163,15 @@ private struct MainMenu: View {
                 } else {
                     Link(destination: SiteInfo.page(item.path)) {
                         Label(item.title, systemImage: item.symbol ?? "link")
+                    }
+                }
+            }
+            if isStaff {
+                Section("ადმინისტრირება") {
+                    Button {
+                        open(.expenses)
+                    } label: {
+                        Label("ხარჯები", systemImage: "banknote")
                     }
                 }
             }

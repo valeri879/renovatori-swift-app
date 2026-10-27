@@ -10,17 +10,22 @@ final class PagedList<Item: Decodable & Identifiable>: ObservableObject {
 
     private let path: String
     private let pageSize: Int
+    private let requiresAuth: Bool
     private var extraQuery: [URLQueryItem]
     private var pagination: Pagination?
     private var hasLoaded = false
 
-    init(path: String, pageSize: Int = 12, query: [URLQueryItem] = []) {
+    init(path: String, pageSize: Int = 12, query: [URLQueryItem] = [], requiresAuth: Bool = false) {
         self.path = path
         self.pageSize = pageSize
+        self.requiresAuth = requiresAuth
         self.extraQuery = query
     }
 
     var hasNext: Bool { pagination?.hasNext ?? false }
+
+    /// Total number of items on the server for the current query, once a page has loaded.
+    var totalItems: Int? { pagination?.totalItems }
 
     /// True once the first page came back without items.
     var isEmpty: Bool { hasLoaded && items.isEmpty && error == nil }
@@ -29,6 +34,11 @@ final class PagedList<Item: Decodable & Identifiable>: ObservableObject {
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
         await reload()
+    }
+
+    /// Drops one item locally (e.g. after deleting it on the server) without reloading.
+    func remove(id: Item.ID) {
+        items.removeAll { $0.id == id }
     }
 
     /// Replaces the list with page 1 (pull-to-refresh, sort change, retry).
@@ -59,7 +69,7 @@ final class PagedList<Item: Decodable & Identifiable>: ObservableObject {
 
         do {
             let response: PagedResponse<Item> = try await APIClient.shared.sendPaged(
-                Endpoint(method: .get, path: path, query: query)
+                Endpoint(method: .get, path: path, query: query, requiresAuth: requiresAuth)
             )
             if replacing {
                 items = response.data

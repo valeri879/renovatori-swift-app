@@ -1,18 +1,58 @@
 import Foundation
 import UIKit
 
-/// One API call: method, path under `APIConfig.baseURL`, optional JSON body, and whether it needs a Bearer token.
+/// One API call: method, path under `APIConfig.baseURL`, optional JSON or multipart body,
+/// and whether it needs a Bearer token.
 struct Endpoint {
     enum Method: String {
         case get = "GET"
         case post = "POST"
+        case delete = "DELETE"
     }
 
     let method: Method
     let path: String
     var query: [URLQueryItem] = []
     var body: (any Encodable)?
+    /// Sent instead of `body` for file uploads (`multipart/form-data`).
+    var form: MultipartForm?
     var requiresAuth = false
+}
+
+/// A `multipart/form-data` body: text fields plus files.
+struct MultipartForm {
+    struct File {
+        let field: String
+        let fileName: String
+        let mimeType: String
+        let data: Data
+    }
+
+    var fields: [(name: String, value: String)] = []
+    var files: [File] = []
+    let boundary = "Boundary-\(UUID().uuidString)"
+
+    var contentType: String { "multipart/form-data; boundary=\(boundary)" }
+
+    func encoded() -> Data {
+        var body = Data()
+        func append(_ string: String) { body.append(Data(string.utf8)) }
+
+        for field in fields {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"\(field.name)\"\r\n\r\n")
+            append("\(field.value)\r\n")
+        }
+        for file in files {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"\(file.field)\"; filename=\"\(file.fileName)\"\r\n")
+            append("Content-Type: \(file.mimeType)\r\n\r\n")
+            body.append(file.data)
+            append("\r\n")
+        }
+        append("--\(boundary)--\r\n")
+        return body
+    }
 }
 
 /// Sends requests to the Renovatori API.
@@ -121,7 +161,10 @@ actor APIClient {
         if let accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
-        if let body = endpoint.body {
+        if let form = endpoint.form {
+            request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+            request.httpBody = form.encoded()
+        } else if let body = endpoint.body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
         }

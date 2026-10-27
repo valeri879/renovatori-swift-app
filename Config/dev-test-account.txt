@@ -4,3 +4,9 @@ lastName=Simulator
 phoneNumber=555000111
 email=ios-test-1792945992@example.com
 password=0N3xLMAuC6NC
+
+# LOCAL staff test accounts (isAdmin / isModerator), created for the admin expenses API.
+admin.email=ios-admin-1793087200054@example.com
+admin.password=RBgmGbexg6mI
+moderator.email=ios-moderator-1793087200054@example.com
+moderator.password=MpoFIE6Q65Sp
