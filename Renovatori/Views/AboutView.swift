@@ -2,7 +2,7 @@ import SwiftUI
 
 /// "ჩვენ შესახებ" screen (`views/pages/about-page/about-page.pug`), built from standard SwiftUI components.
 struct AboutView: View {
-    /// Returns to the main page and scrolls to the price comparison.
+    /// Opens the prices screen.
     let showPrices: () -> Void
 
     var body: some View {
@@ -88,7 +88,7 @@ struct AboutView: View {
                 text: AboutPageData.clientText
             )
 
-            Link("პროექტების ნახვა", destination: SiteInfo.page("/projects"))
+            NavigationLink("პროექტების ნახვა", value: AppRoute.projects)
                 .buttonStyle(.bordered)
 
             ProjectDashboardPreview()
@@ -138,7 +138,7 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
 
             VStack(spacing: 10) {
-                Link(destination: SiteInfo.page("/consultation")) {
+                NavigationLink(value: AppRoute.consultation) {
                     Text("კონსულტაციის მოთხოვნა")
                         .frame(maxWidth: .infinity)
                 }
@@ -183,9 +183,9 @@ private struct AboutHero: View {
                         .foregroundStyle(.white.opacity(0.9))
 
                     HStack(spacing: 12) {
-                        Link("კონსულტაცია", destination: SiteInfo.page("/consultation"))
+                        NavigationLink("კონსულტაცია", value: AppRoute.consultation)
                             .buttonStyle(.borderedProminent)
-                        Link("პროექტები", destination: SiteInfo.page("/projects"))
+                        NavigationLink("პროექტები", value: AppRoute.projects)
                             .buttonStyle(.bordered)
                             .tint(.white)
                     }

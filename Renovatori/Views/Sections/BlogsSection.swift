@@ -23,6 +23,12 @@ struct BlogsSection: View {
                     }
                 }
             }
+
+            NavigationLink(value: AppRoute.blog) {
+                Label("ყველა ბლოგის ნახვა", systemImage: "newspaper")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
         }
         .padding(.horizontal)
     }
@@ -32,7 +38,7 @@ private struct BlogRow: View {
     let blog: BlogPost
 
     var body: some View {
-        Link(destination: SiteInfo.page("/blog-list")) {
+        NavigationLink(value: AppRoute.blog) {
             HStack(alignment: .top, spacing: 12) {
                 RemoteImage(url: blog.imageURL)
                     .frame(width: 88, height: 88)

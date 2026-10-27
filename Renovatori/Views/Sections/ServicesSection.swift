@@ -52,6 +52,13 @@ struct ProjectsSection: View {
             }
             .contentMargins(.horizontal, 16, for: .scrollContent)
             .scrollTargetBehavior(.viewAligned)
+
+            NavigationLink(value: AppRoute.projects) {
+                Label("ყველა პროექტის ნახვა", systemImage: "hammer")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .padding(.horizontal)
         }
     }
 }

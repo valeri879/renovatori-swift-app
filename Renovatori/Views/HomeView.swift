@@ -2,7 +2,11 @@ import SwiftUI
 
 /// Main page of renovatori.ge (`views/pages/main-page/main-page.pug`), built from standard SwiftUI components.
 struct HomeView: View {
+    @EnvironmentObject private var auth: AuthViewModel
     @State private var path: [AppRoute] = []
+    @State private var isShowingLogin = false
+    /// Where to go after the login sheet signs the user in (the profile when nil).
+    @State private var destinationAfterSignIn: AppRoute?
     /// Section to scroll to once the main page is visible.
     @State private var scrollTarget: HomeSection?
 
@@ -32,6 +36,8 @@ struct HomeView: View {
                     scrollTarget = nil
                 }
             }
+            // Hidden behind the principal toolbar item; it names the back button on subpages.
+            .navigationTitle("მთავარი")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -48,25 +54,77 @@ struct HomeView: View {
                         .font(.headline)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    MainMenu { route in path.append(route) }
+                    MainMenu(
+                        isSignedIn: auth.currentUser != nil,
+                        open: { route in path.append(route) },
+                        signIn: { showSignIn(then: nil) }
+                    )
                 }
             }
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
                 case .about:
-                    AboutView(showPrices: showPricesFromSubpage)
+                    AboutView { path.append(.prices) }
+                case .prices:
+                    PricesView()
+                case .faq:
+                    FAQView()
+                case .profile:
+                    ProfileView()
+                case .projects:
+                    ProjectsListView()
+                case .project(let id):
+                    ProjectDetailView(id: id)
+                case .blog:
+                    BlogListView()
+                case .blogPost(let id):
+                    BlogDetailView(id: id)
+                case .calculator:
+                    CalculatorView()
+                case .consultation:
+                    ConsultationView()
+                case .consultationOrder(let consultationType):
+                    ConsultationOrderView(consultationType: consultationType)
+                case .contact:
+                    ContactView()
                 }
             }
         }
-    }
-
-    /// Pops back to the main page, then scrolls once the pop animation has finished.
-    private func showPricesFromSubpage() {
-        path.removeAll()
-        Task {
-            try? await Task.sleep(for: .milliseconds(450))
-            scrollTarget = .prices
+        .environment(\.appNavigation, AppNavigation(
+            open: { route in path.append(route) },
+            signIn: { destination in showSignIn(then: destination) }
+        ))
+        .sheet(isPresented: $isShowingLogin, onDismiss: { destinationAfterSignIn = nil }) {
+            NavigationStack {
+                LoginView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("დახურვა") { isShowingLogin = false }
+                        }
+                    }
+            }
         }
+        .onChange(of: auth.currentUser?.id) { oldID, newID in
+            if newID != nil, oldID == nil, isShowingLogin {
+                // Just logged in or signed up: close the sheet and continue where the user was headed.
+                let destination = destinationAfterSignIn ?? .profile
+                isShowingLogin = false
+                // The screen that asked for sign-in may already be on top (e.g. the booking form).
+                if path.last != destination {
+                    path.append(destination)
+                }
+            } else if newID == nil {
+                // Logged out (or the session expired): leave the profile screen.
+                path.removeAll { $0 == .profile }
+            }
+        }
+    }
+}
+
+extension HomeView {
+    private func showSignIn(then destination: AppRoute?) {
+        destinationAfterSignIn = destination
+        isShowingLogin = true
     }
 }
 
@@ -78,7 +136,9 @@ enum HomeSection: Hashable {
 /// The site's navbar links, collapsed into a toolbar menu.
 /// Items with a route open an in-app screen; the rest open renovatori.ge.
 private struct MainMenu: View {
+    let isSignedIn: Bool
     let open: (AppRoute) -> Void
+    let signIn: () -> Void
 
     var body: some View {
         Menu {
@@ -96,8 +156,16 @@ private struct MainMenu: View {
                 }
             }
             Divider()
-            Link(destination: SiteInfo.page("/login")) {
-                Label("შესვლა", systemImage: "person.crop.circle")
+            if isSignedIn {
+                Button {
+                    open(.profile)
+                } label: {
+                    Label("ჩემი პროფილი", systemImage: "person.crop.circle")
+                }
+            } else {
+                Button(action: signIn) {
+                    Label("შესვლა", systemImage: "person.crop.circle")
+                }
             }
         } label: {
             Image(systemName: "line.3.horizontal")
@@ -108,4 +176,5 @@ private struct MainMenu: View {
 
 #Preview {
     HomeView()
+        .environmentObject(AuthViewModel())
 }

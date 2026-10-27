@@ -1,0 +1,6 @@
+# Throwaway account on the LOCAL backend (mongodb://127.0.0.1/renovatori) used to test auth in the simulator.
+firstName=Test
+lastName=Simulator
+phoneNumber=555000111
+email=ios-test-1792945992@example.com
+password=HvAThMXAkjem

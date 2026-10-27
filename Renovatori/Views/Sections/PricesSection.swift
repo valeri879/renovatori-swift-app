@@ -1,39 +1,52 @@
 import SwiftUI
 
-/// "კარკასული რემონტის ფასები": package comparison with a collapsible group per work category.
+/// "კარკასული რემონტის ფასები" on the main page.
 struct PricesSection: View {
-    private let columnWidth: CGFloat = 64
-
     var body: some View {
         VStack(spacing: 16) {
             SectionHeader(
                 title: "კარკასული რემონტის ფასები",
                 subtitle: "ჩვენ გთავაზობთ სრულ სარემონტო მომსახურებას მაქსიმალურად მისაღები ფასებით."
             )
-
-            GroupBox {
-                VStack(spacing: 12) {
-                    packageHeader
-                    Divider()
-                    ForEach(Array(categories.enumerated()), id: \.offset) { index, category in
-                        CategoryGroup(category: category, columnWidth: columnWidth, startsExpanded: index == 0)
-                        if index < categories.count - 1 {
-                            Divider()
-                        }
-                    }
-                }
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("პაკეტების შედარება")
-                        .font(.headline)
-                    Text("აირჩიეთ თქვენთვის სასურველი კარკასის პაკეტი სერვისების მიხედვით.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 8)
-            }
+            PriceComparison()
         }
         .padding(.horizontal)
+    }
+}
+
+/// `price-list.component.pug`: package comparison with a collapsible group per work category.
+struct PriceComparison: View {
+    /// The main page opens only the first category; the prices screen opens all of them.
+    var expandsAllCategories = false
+
+    private let columnWidth: CGFloat = 64
+
+    var body: some View {
+        GroupBox {
+            VStack(spacing: 12) {
+                packageHeader
+                Divider()
+                ForEach(Array(categories.enumerated()), id: \.offset) { index, category in
+                    CategoryGroup(
+                        category: category,
+                        columnWidth: columnWidth,
+                        startsExpanded: expandsAllCategories || index == 0
+                    )
+                    if index < categories.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("პაკეტების შედარება")
+                    .font(.headline)
+                Text("აირჩიეთ თქვენთვის სასურველი კარკასის პაკეტი სერვისების მიხედვით.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.bottom, 8)
+        }
     }
 
     private var packageHeader: some View {

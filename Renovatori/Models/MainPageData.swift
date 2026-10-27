@@ -19,6 +19,18 @@ enum SiteInfo {
 /// Screens that exist inside the app; other menu items open renovatori.ge.
 enum AppRoute: Hashable {
     case about
+    case prices
+    case faq
+    case profile
+    case projects
+    case project(String)
+    case blog
+    case blogPost(String)
+    case calculator
+    case consultation
+    /// Booking form, preselected with a package name from `ConsultationPageData.packages`.
+    case consultationOrder(String)
+    case contact
 }
 
 struct NavItem: Identifiable {
@@ -78,23 +90,30 @@ struct BlogPost: Identifiable {
 }
 
 struct FAQItem: Identifiable {
+    let id: String
     let question: String
-    let answer: String
-    var id: String { question }
+    let answer: AttributedString
+}
+
+extension FAQItem {
+    /// Plain-text entry for the static main page snapshot.
+    init(question: String, answer: String) {
+        self.init(id: question, question: question, answer: AttributedString(answer))
+    }
 }
 
 /// Static demo content mirroring `views/pages/main-page/main-page.pug` and its components.
 /// Team, blog and FAQ entries are a snapshot of what renovatori.ge loads from the database.
 enum MainPageData {
     static let menu: [NavItem] = [
-        NavItem(title: "კონსულტაცია", path: "/consultation", symbol: "bubble.left.and.bubble.right"),
-        NavItem(title: "კალკულატორი", path: "/calculator", symbol: "plus.forwardslash.minus"),
+        NavItem(title: "კონსულტაცია", path: "/consultation", symbol: "bubble.left.and.bubble.right", route: .consultation),
+        NavItem(title: "კალკულატორი", path: "/calculator", symbol: "plus.forwardslash.minus", route: .calculator),
         NavItem(title: "ჩვენ შესახებ", path: "/about", symbol: "info.circle", route: .about),
-        NavItem(title: "ფასები", path: "/prices", symbol: "tag"),
-        NavItem(title: "ბლოგი", path: "/blog-list", symbol: "newspaper"),
-        NavItem(title: "პროექტები", path: "/projects", symbol: "hammer"),
-        NavItem(title: "ხშირად დასმული კითხვები", path: "/faq", symbol: "questionmark.circle"),
-        NavItem(title: "კონტაქტი", path: "/contact", symbol: "phone"),
+        NavItem(title: "ფასები", path: "/prices", symbol: "tag", route: .prices),
+        NavItem(title: "ბლოგი", path: "/blog-list", symbol: "newspaper", route: .blog),
+        NavItem(title: "პროექტები", path: "/projects", symbol: "hammer", route: .projects),
+        NavItem(title: "ხშირად დასმული კითხვები", path: "/faq", symbol: "questionmark.circle", route: .faq),
+        NavItem(title: "კონტაქტი", path: "/contact", symbol: "phone", route: .contact),
     ]
 
     static let footerLinks: [NavItem] = [
