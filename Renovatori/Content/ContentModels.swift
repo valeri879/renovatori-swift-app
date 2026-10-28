@@ -14,6 +14,8 @@ struct ProjectSummary: Decodable, Identifiable, Hashable {
     let startDate: Date?
     let endDate: Date?
     let coverImageUrl: String?
+    /// Nil from backends that send only `updatedAt` on cards.
+    let createdAt: Date?
     let updatedAt: Date?
     /// Staff lists include drafts; nil from backends that list only published projects.
     let isPublished: Bool?
@@ -140,8 +142,24 @@ struct BlogDetail: Decodable, Identifiable, Hashable {
     let updatedAt: Date?
 }
 
+/// `GET /blog/:id` → `{ blog, latestBlogs, latestProjects }`, like the web blog page. Older backends send only `blog`.
 struct BlogDetailResponse: Decodable {
     let blog: BlogDetail
+    /// The 3 latest other published posts.
+    let latestBlogs: [BlogSummary]
+    /// The 3 latest published projects.
+    let latestProjects: [ProjectSummary]
+
+    private enum CodingKeys: String, CodingKey {
+        case blog, latestBlogs, latestProjects
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        blog = try container.decode(BlogDetail.self, forKey: .blog)
+        latestBlogs = try container.decodeIfPresent([BlogSummary].self, forKey: .latestBlogs) ?? []
+        latestProjects = try container.decodeIfPresent([ProjectSummary].self, forKey: .latestProjects) ?? []
+    }
 }
 
 /// Entry in `GET /faq`. `description` is HTML.

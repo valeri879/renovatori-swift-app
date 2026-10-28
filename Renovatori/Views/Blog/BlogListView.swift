@@ -62,7 +62,8 @@ struct BlogListView: View {
     }
 }
 
-private struct BlogSummaryRow: View {
+/// A post in the blog list and under a post („ბოლო ბლოგები").
+struct BlogSummaryRow: View {
     let blog: BlogSummary
 
     var body: some View {

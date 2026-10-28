@@ -33,6 +33,8 @@ enum AppRoute: Hashable {
     case contact
     case emailVerification
     case passwordChange
+    /// "ჩემი პროექტები": projects linked to the signed-in user.
+    case myProjects
     /// Admin: expense projects (`/admin/expenses-list`). Staff only.
     case expenses
     /// Admin: one expense project. Staff only.
@@ -41,7 +43,7 @@ enum AppRoute: Hashable {
     /// Screens that need a signed-in account; they are closed when the session ends.
     var requiresAccount: Bool {
         switch self {
-        case .profile, .emailVerification, .passwordChange, .expenses, .expenseDetail: true
+        case .profile, .emailVerification, .passwordChange, .myProjects, .expenses, .expenseDetail: true
         default: false
         }
     }
@@ -87,13 +89,6 @@ struct Service: Identifiable {
     var id: String { icon }
 }
 
-struct Project: Identifiable {
-    let image: String
-    let title: String
-    let text: String
-    var id: String { image }
-}
-
 struct PricePackage: Identifiable {
     let title: String
     let pricePerSquareMeter: Int
@@ -117,14 +112,6 @@ struct Partner: Identifiable {
     let profession: String
     let imageURL: URL?
     var id: String { name }
-}
-
-struct BlogPost: Identifiable {
-    let title: String
-    let summary: String
-    let date: String
-    let imageURL: URL?
-    var id: String { title }
 }
 
 struct FAQItem: Identifiable {
@@ -199,24 +186,6 @@ enum MainPageData {
         ),
     ]
 
-    static let projects: [Project] = [
-        Project(
-            image: "order-1",
-            title: "პროფესიული მონტაჟი და აწყობა",
-            text: "პროფესიონალური მონტაჟი — ავეჯი, ტექნიკა და ელემენტების აწყობა ზუსტი ზომებით და ხარისხიანი შესრულებით."
-        ),
-        Project(
-            image: "order-2",
-            title: "პროექტის მენეჯმენტი",
-            text: "ვაკონტროლებთ ვადებს, ხშირად ვაწვდით პროგრესის ანგარიშს და ვმართავთ პროექტს სრულად, რათა ყველაფერი დროულად და შესაბამისად დაგეგმოს."
-        ),
-        Project(
-            image: "order-3",
-            title: "გარანტია და შემდგომი მომსახურება",
-            text: "ვაძლევთ ხარისხის გარანტიას და ვატარებთ საჭირო შემდგომ მომსახურებას პრობლემების სწრაფად მოგვარებისთვის."
-        ),
-    ]
-
     static let pricePackages: [PricePackage] = [
         PricePackage(title: "მწვანე კარკასი", pricePerSquareMeter: 550, url: URL(string: "https://renovatori.ge/blog/693e40002ed62d127ab05108")!),
         PricePackage(title: "თეთრი კარკასი", pricePerSquareMeter: 600, url: URL(string: "https://renovatori.ge/blog/693e40342ed62d127ab0510e")!),
@@ -273,27 +242,6 @@ enum MainPageData {
         Partner(name: "გიორგი", profession: "სანტექნიკი, ბოილერის სპეციალისტი, ჩასაშენებელი უნიტაზის სპეციალისტი", imageURL: nil),
         Partner(name: "ზურა", profession: "ფრანგული ჭერის სპეციალისტი", imageURL: upload("1776793971446-594387919.jpg")),
         Partner(name: "თორნიკე", profession: "ელექტრიკოსი", imageURL: nil),
-    ]
-
-    static let blogs: [BlogPost] = [
-        BlogPost(
-            title: "როგორ ითვლება რემონტის სავარაუდო ღირებულება?",
-            summary: "რემონტის კალკულატორი — გაიგეთ როგორ ითვლება რემონტის სავარაუდო ფასი ფართობის, ელექტროობის და სხვა დეტალების მიხედვით.",
-            date: "12/06/2026",
-            imageURL: upload("1779953226961-17957373.jpg")
-        ),
-        BlogPost(
-            title: "რატომ არის ინტერიერის დიზაინი მნიშვნელოვანი რემონტის პროცესში?",
-            summary: "ინტერიერის დიზაინის მნიშვნელობა რემონტში — ტექნიკური ნახაზები, ვადები, ხარჯების დაზოგვა და საბოლოო შედეგის წინასწარ დაგეგმვა.",
-            date: "12/06/2026",
-            imageURL: upload("1779821870198-193890095.jpg")
-        ),
-        BlogPost(
-            title: "რა ჯდება აბაზანის რემონტი?",
-            summary: "აბაზანის რემონტის ფასი დამოკიდებულია ფილებზე, სანტექნიკაზე, დემონტაჟსა და სხვა მნიშვნელოვან დეტალებზე.",
-            date: "12/06/2026",
-            imageURL: upload("1779223268316-274187398.jpg")
-        ),
     ]
 
     static let faqs: [FAQItem] = [

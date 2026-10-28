@@ -81,6 +81,8 @@ final class AuthViewModel: ObservableObject {
 
     /// Revokes the refresh token on the backend, then forgets the session locally either way.
     func logout() async {
+        // Needs the access token, so it runs before the session is revoked.
+        await PushNotifications.shared.unregisterBeforeSignOut()
         if let refreshToken = tokenStore.refreshToken {
             _ = try? await client.send(
                 Endpoint(method: .post, path: "auth/logout", body: LogoutRequest(refreshToken: refreshToken)),

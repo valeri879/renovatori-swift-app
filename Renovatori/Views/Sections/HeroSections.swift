@@ -56,11 +56,24 @@ struct CoverView: View {
                     .scaledToFill()
             }
             .clipped()
+            // Darkens the photo from the bottom up, so the white slogan stays readable over light areas.
+            .overlay {
+                LinearGradient(
+                    stops: [
+                        .init(color: .black.opacity(0.85), location: 0),
+                        .init(color: .black.opacity(0.6), location: 0.45),
+                        .init(color: .black.opacity(0.15), location: 1),
+                    ],
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+            }
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("რემონტი, რომელიც იწყება გეგმიდან და სრულდება სრულყოფილებით.")
                         .font(.title.bold())
                         .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.4), radius: 4, y: 1)
 
                     HStack(spacing: 12) {
                         Button(action: showPrices) {
@@ -78,13 +91,6 @@ struct CoverView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    LinearGradient(
-                        colors: [.black.opacity(0.75), .black.opacity(0)],
-                        startPoint: .bottom,
-                        endPoint: .top
-                    )
-                )
             }
     }
 }

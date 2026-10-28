@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// "ბლოგები რემონტზე": latest posts as tappable rows.
+/// "ბლოგები რემონტზე": the 3 latest posts from `GET /blog` (like the web main page); each row opens its post.
 struct BlogsSection: View {
+    @StateObject private var latest = PagedList<BlogSummary>(path: "blog", pageSize: 3)
+
     var body: some View {
         VStack(spacing: 16) {
             SectionHeader(
@@ -9,12 +11,17 @@ struct BlogsSection: View {
                 subtitle: "წაიკითხეთ ბლოგები რემონტზე: ინტერიერის დიზაინი, სარემონტო ფასები, მასალების არჩევა და პრაქტიკული რჩევები ბინისა და სახლის განახლებისთვის."
             )
 
-            if MainPageData.blogs.isEmpty {
+            if latest.isEmpty {
                 ContentUnavailableView("ბლოგები ჯერ არ მოიძებნა.", systemImage: "newspaper")
+            } else if latest.items.isEmpty {
+                // Loading, or the request failed: the "all blogs" button below still works.
+                if latest.error == nil {
+                    ProgressView()
+                }
             } else {
                 GroupBox {
                     VStack(spacing: 12) {
-                        ForEach(Array(MainPageData.blogs.enumerated()), id: \.element.id) { index, blog in
+                        ForEach(Array(latest.items.enumerated()), id: \.element.id) { index, blog in
                             if index > 0 {
                                 Divider()
                             }
@@ -31,16 +38,17 @@ struct BlogsSection: View {
             .buttonStyle(.bordered)
         }
         .padding(.horizontal)
+        .task { await latest.loadIfNeeded() }
     }
 }
 
 private struct BlogRow: View {
-    let blog: BlogPost
+    let blog: BlogSummary
 
     var body: some View {
-        NavigationLink(value: AppRoute.blog) {
+        NavigationLink(value: AppRoute.blogPost(blog.id)) {
             HStack(alignment: .top, spacing: 12) {
-                RemoteImage(url: blog.imageURL)
+                RemoteImage(url: APIConfig.imageURL(blog.coverImageUrl), fallbackAsset: "cover.jpg")
                     .frame(width: 88, height: 88)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
 
@@ -49,13 +57,17 @@ private struct BlogRow: View {
                         .font(.subheadline.bold())
                         .foregroundStyle(.primary)
                         .lineLimit(3)
-                    Text(blog.summary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                    Label(blog.date, systemImage: "calendar")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    if !blog.metaDescription.isEmpty {
+                        Text(blog.metaDescription)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    if let date = blog.createdAt {
+                        Label(date.siteFormatted, systemImage: "calendar")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)

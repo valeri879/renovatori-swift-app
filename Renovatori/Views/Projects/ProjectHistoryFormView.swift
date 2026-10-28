@@ -110,7 +110,7 @@ struct ProjectHistoryFormView: View {
             }
 
             Section {
-                Toggle("ელ-ფოსტაზე შეტყობინების გაგზავნა", isOn: $sendClientEmail)
+                Toggle("კლიენტისთვის შეტყობინების გაგზავნა (ელ-ფოსტა და აპლიკაცია)", isOn: $sendClientEmail)
             } footer: {
                 if let errorMessage {
                     FormErrorBanner(message: errorMessage)

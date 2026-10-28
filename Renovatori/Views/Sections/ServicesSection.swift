@@ -31,8 +31,11 @@ struct ServicesSection: View {
     }
 }
 
-/// "ჩვენ მიერ შესრულებული პროექტები": horizontally scrolling photo cards.
+/// "ჩვენ მიერ შესრულებული პროექტები": the 3 latest published projects from `GET /projects`,
+/// as horizontally scrolling photo cards; each card opens its project.
 struct ProjectsSection: View {
+    @StateObject private var latest = PagedList<ProjectSummary>(path: "projects", pageSize: 3)
+
     var body: some View {
         VStack(spacing: 16) {
             SectionHeader(
@@ -41,17 +44,30 @@ struct ProjectsSection: View {
             )
             .padding(.horizontal)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(MainPageData.projects) { project in
-                        ProjectCard(project: project)
-                            .containerRelativeFrame(.horizontal) { width, _ in width * 0.85 }
-                    }
+            if latest.isEmpty {
+                ContentUnavailableView("პროექტები ჯერ არ მოიძებნა.", systemImage: "hammer")
+            } else if latest.items.isEmpty {
+                // Loading, or the request failed: the "all projects" button below still works.
+                if latest.error == nil {
+                    ProgressView()
                 }
-                .scrollTargetLayout()
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 12) {
+                        ForEach(latest.items) { project in
+                            NavigationLink(value: AppRoute.project(project.id)) {
+                                ProjectCard(project: project)
+                            }
+                            // Plain style keeps the card's own text colors instead of tinting everything.
+                            .buttonStyle(.plain)
+                            .containerRelativeFrame(.horizontal) { width, _ in width * 0.85 }
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, 16, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
             }
-            .contentMargins(.horizontal, 16, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
 
             NavigationLink(value: AppRoute.projects) {
                 Label("ყველა პროექტის ნახვა", systemImage: "hammer")
@@ -60,28 +76,28 @@ struct ProjectsSection: View {
             .buttonStyle(.bordered)
             .padding(.horizontal)
         }
+        .task { await latest.loadIfNeeded() }
     }
 }
 
 private struct ProjectCard: View {
-    let project: Project
+    let project: ProjectSummary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Color.clear
                 .aspectRatio(5 / 3, contentMode: .fit)
                 .overlay {
-                    Image(resource: "\(project.image).jpg")
-                        .resizable()
-                        .scaledToFill()
+                    RemoteImage(url: APIConfig.imageURL(project.coverImageUrl), fallbackAsset: "cover.jpg")
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             Text(project.title)
                 .font(.headline)
-            Text(project.text)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+            ProjectFacts(location: project.location, area: project.area)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }

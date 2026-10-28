@@ -54,6 +54,12 @@ struct ProfileView: View {
                 }
             }
 
+            Section {
+                NavigationLink(value: AppRoute.myProjects) {
+                    Label("ჩემი პროექტები", systemImage: "hammer")
+                }
+            }
+
             if user.isStaff {
                 Section("ადმინისტრირება") {
                     NavigationLink(value: AppRoute.expenses) {

@@ -3,6 +3,7 @@ import SwiftUI
 /// Main page of renovatori.ge (`views/pages/main-page/main-page.pug`), built from standard SwiftUI components.
 struct HomeView: View {
     @EnvironmentObject private var auth: AuthViewModel
+    @ObservedObject private var push = PushNotifications.shared
     @State private var path: [AppRoute] = []
     @State private var isShowingLogin = false
     /// Where to go after the login sheet signs the user in (the profile when nil).
@@ -92,6 +93,8 @@ struct HomeView: View {
                     EmailVerificationView()
                 case .passwordChange:
                     PasswordChangeView()
+                case .myProjects:
+                    MyProjectsView()
                 case .expenses:
                     ExpensesListView()
                 case .expenseDetail(let id):
@@ -99,10 +102,32 @@ struct HomeView: View {
                 }
             }
         }
+        // The web's admin quick action (`components/quick-actions`): a floating "ხარჯები" button on every screen.
+        .overlay(alignment: .bottomTrailing) {
+            if auth.currentUser?.isAdmin == true, !hidesQuickAction {
+                Button(action: openExpenses) {
+                    Label("ხარჯები", systemImage: "banknote")
+                        .font(.subheadline.bold())
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .shadow(radius: 6, y: 3)
+                .padding(20)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.default, value: hidesQuickAction)
         .environment(\.appNavigation, AppNavigation(
             open: { route in path.append(route) },
             signIn: { destination in showSignIn(then: destination) }
         ))
+        // A tapped push notification opens its screen (e.g. the project a history entry was added to).
+        .onChange(of: push.pendingRoute, initial: true) { _, route in
+            guard let route else { return }
+            path = [route]
+            push.pendingRoute = nil
+        }
         // renovatori.ge links (Universal Links, Safari's "open in app" banner) open the same page here.
         .onOpenURL { url in
             path = AppRoute(siteURL: url).map { [$0] } ?? []
@@ -135,6 +160,24 @@ struct HomeView: View {
 }
 
 extension HomeView {
+    /// Screens where the floating "ხარჯები" button is hidden: the expense screens already lead to the
+    /// expenses (back button), and these screens have their own buttons at the bottom it would cover.
+    private var hidesQuickAction: Bool {
+        switch path.last {
+        case .expenses, .expenseDetail, .calculator: true
+        default: false
+        }
+    }
+
+    /// Goes back to the expenses list when it is already open further down the stack, otherwise pushes it.
+    private func openExpenses() {
+        if let index = path.lastIndex(of: .expenses) {
+            path.removeSubrange(path.index(after: index)...)
+        } else {
+            path.append(.expenses)
+        }
+    }
+
     private func showSignIn(then destination: AppRoute?) {
         destinationAfterSignIn = destination
         isShowingLogin = true
@@ -185,6 +228,11 @@ private struct MainMenu: View {
                     open(.profile)
                 } label: {
                     Label("ჩემი პროფილი", systemImage: "person.crop.circle")
+                }
+                Button {
+                    open(.myProjects)
+                } label: {
+                    Label("ჩემი პროექტები", systemImage: "hammer")
                 }
             } else {
                 Button(action: signIn) {
