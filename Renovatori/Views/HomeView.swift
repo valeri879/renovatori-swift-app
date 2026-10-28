@@ -103,6 +103,10 @@ struct HomeView: View {
             open: { route in path.append(route) },
             signIn: { destination in showSignIn(then: destination) }
         ))
+        // renovatori.ge links (Universal Links, Safari's "open in app" banner) open the same page here.
+        .onOpenURL { url in
+            path = AppRoute(siteURL: url).map { [$0] } ?? []
+        }
         .sheet(isPresented: $isShowingLogin, onDismiss: { destinationAfterSignIn = nil }) {
             NavigationStack {
                 LoginView()

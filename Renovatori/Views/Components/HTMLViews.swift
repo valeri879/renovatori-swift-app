@@ -46,13 +46,15 @@ enum HTMLText {
 }
 
 /// Renders a blog post's HTML body with WebKit, so images, lists and headings look like the site.
-/// Grows to fit its content; links open outside the app.
+/// Grows to fit its content. Links to renovatori.ge pages the app has open those screens;
+/// other links open outside the app.
 struct HTMLContentView: View {
     let html: String
+    @Environment(\.appNavigation) private var navigation
     @State private var height: CGFloat = 1
 
     var body: some View {
-        HTMLWebView(html: html, height: $height)
+        HTMLWebView(html: html, height: $height, openRoute: navigation.open)
             .frame(height: height)
     }
 }
@@ -60,6 +62,7 @@ struct HTMLContentView: View {
 private struct HTMLWebView: UIViewRepresentable {
     let html: String
     @Binding var height: CGFloat
+    let openRoute: (AppRoute) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(height: $height)
@@ -78,6 +81,7 @@ private struct HTMLWebView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.openRoute = openRoute
         guard context.coordinator.loadedHTML != html else { return }
         context.coordinator.loadedHTML = html
         // Relative `/uploads/...` images resolve against the API origin.
@@ -111,6 +115,7 @@ private struct HTMLWebView: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate {
         var loadedHTML: String?
+        var openRoute: (AppRoute) -> Void = { _ in }
         private let height: Binding<CGFloat>
 
         init(height: Binding<CGFloat>) {
@@ -145,9 +150,14 @@ private struct HTMLWebView: UIViewRepresentable {
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
-            // The initial `loadHTMLString` is `.other`; everything the reader taps opens in Safari / the dialer.
+            // The initial `loadHTMLString` is `.other`; a tapped site link opens its in-app screen,
+            // anything else opens in Safari / the dialer.
             if navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url {
-                UIApplication.shared.open(url)
+                if let route = AppRoute(siteURL: url) {
+                    openRoute(route)
+                } else {
+                    UIApplication.shared.open(url)
+                }
                 decisionHandler(.cancel)
             } else {
                 decisionHandler(.allow)

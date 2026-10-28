@@ -45,6 +45,30 @@ enum AppRoute: Hashable {
         default: false
         }
     }
+
+    /// The in-app screen for a renovatori.ge link (`/blog/:id`, `/project/:id`, …), so links inside
+    /// blog posts stay in the app. Nil for other sites and for pages the app does not have.
+    init?(siteURL url: URL) {
+        let siteHosts = [SiteInfo.baseURL.host(), APIConfig.origin.host()].compactMap { $0 }
+        guard let host = url.host()?.lowercased() else { return nil }
+        let bareHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        guard siteHosts.contains(bareHost) else { return nil }
+
+        let parts = url.pathComponents.filter { $0 != "/" }
+        switch (parts.first, parts.count) {
+        case ("blog", 2): self = .blogPost(parts[1])
+        case ("blog-list", 1): self = .blog
+        case ("project", 2): self = .project(parts[1])
+        case ("projects", 1): self = .projects
+        case ("faq", 1): self = .faq
+        case ("prices", 1): self = .prices
+        case ("about", 1): self = .about
+        case ("calculator", 1): self = .calculator
+        case ("consultation", 1): self = .consultation
+        case ("contact", 1): self = .contact
+        default: return nil
+        }
+    }
 }
 
 struct NavItem: Identifiable {
