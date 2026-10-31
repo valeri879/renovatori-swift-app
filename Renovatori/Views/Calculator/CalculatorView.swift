@@ -35,6 +35,12 @@ struct CalculatorView: View {
         .navigationTitle("კალკულატორი")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: SiteInfo.page("/calculator")) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("გაზიარება")
+            }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("მზადაა") { Self.dismissKeyboard() }

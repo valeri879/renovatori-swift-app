@@ -16,8 +16,10 @@ struct HomeView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 32) {
-                        ContactBar()
-                        CoverView { scrollTarget = .prices }
+                        VStack(spacing: 16) {
+                            ContactBar()
+                            CoverView { scrollTarget = .prices }
+                        }
                         ServicesSection()
                         ProjectsSection()
                         PricesSection()

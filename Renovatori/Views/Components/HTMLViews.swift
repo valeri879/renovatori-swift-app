@@ -107,9 +107,7 @@ private struct HTMLWebView: UIViewRepresentable {
         context.coordinator.openRoute = openRoute
         context.coordinator.scrollToOffset = scrollToOffset
         guard context.coordinator.loadedHTML != html else { return }
-        context.coordinator.loadedHTML = html
-        // Relative `/uploads/...` images resolve against the API origin.
-        webView.loadHTMLString(Self.document(body: html), baseURL: APIConfig.origin)
+        context.coordinator.load(html, in: webView)
     }
 
     private static func document(body: String) -> String {
@@ -145,6 +143,18 @@ private struct HTMLWebView: UIViewRepresentable {
 
         init(height: Binding<CGFloat>) {
             self.height = height
+        }
+
+        func load(_ html: String, in webView: WKWebView) {
+            loadedHTML = html
+            // Relative `/uploads/...` images resolve against the API origin.
+            webView.loadHTMLString(HTMLWebView.document(body: html), baseURL: APIConfig.origin)
+        }
+
+        /// iOS can end the web process of an app left in the background, which blanks the view.
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            guard let loadedHTML else { return }
+            load(loadedHTML, in: webView)
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
