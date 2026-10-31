@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Page links, theme picker, credits and version.
+/// Theme picker, credits and app version.
 struct FooterView: View {
     @AppStorage(ThemePreference.storageKey) private var theme: ThemePreference = .system
     @AppStorage(APIEnvironment.storageKey) private var apiEnvironment: APIEnvironment = .local
@@ -16,13 +16,6 @@ struct FooterView: View {
     var body: some View {
         VStack(spacing: 20) {
             Divider()
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 10) {
-                ForEach(MainPageData.footerLinks) { item in
-                    Link(item.title, destination: SiteInfo.page(item.path))
-                        .font(.subheadline)
-                }
-            }
 
             Picker("თემა", selection: $theme) {
                 ForEach(ThemePreference.allCases) { option in

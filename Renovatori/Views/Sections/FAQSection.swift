@@ -1,14 +1,23 @@
 import SwiftUI
 
-/// "ხშირად დასმული კითხვები" on the main page.
+/// "ხშირად დასმული კითხვები" on the main page, loaded from `GET /faq`.
 struct FAQSection: View {
+    @StateObject private var model = FAQViewModel()
+
     var body: some View {
         VStack(spacing: 16) {
             SectionHeader(
                 title: FAQAccordion.title,
                 subtitle: FAQAccordion.subtitle
             )
-            FAQAccordion()
+            switch model.state {
+            case .loading:
+                ProgressView()
+            case .failed(let error):
+                ErrorStateView(error: error) { await model.load() }
+            case .loaded(let items):
+                FAQAccordion(items: items)
+            }
 
             NavigationLink(value: AppRoute.faq) {
                 Label("ყველა კითხვის ნახვა", systemImage: "questionmark.circle")
@@ -17,6 +26,7 @@ struct FAQSection: View {
             .buttonStyle(.bordered)
         }
         .padding(.horizontal)
+        .task { await model.loadIfNeeded() }
     }
 }
 
@@ -29,7 +39,7 @@ struct FAQAccordion: View {
     /// The first question starts expanded, as on the site.
     @State private var expandedID: FAQItem.ID?
 
-    init(items: [FAQItem] = MainPageData.faqs) {
+    init(items: [FAQItem]) {
         self.items = items
         _expandedID = State(initialValue: items.first?.id)
     }

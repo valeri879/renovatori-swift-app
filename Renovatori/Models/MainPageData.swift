@@ -92,7 +92,8 @@ struct Service: Identifiable {
 struct PricePackage: Identifiable {
     let title: String
     let pricePerSquareMeter: Int
-    let url: URL
+    /// The package's article, opened with the app's native blog screen.
+    let blogID: String
     var id: String { title }
 
     /// "მწვანე კარკასი" -> "მწვანე", for the narrow comparison columns.
@@ -120,15 +121,8 @@ struct FAQItem: Identifiable {
     let answer: AttributedString
 }
 
-extension FAQItem {
-    /// Plain-text entry for the static main page snapshot.
-    init(question: String, answer: String) {
-        self.init(id: question, question: question, answer: AttributedString(answer))
-    }
-}
-
 /// Static demo content mirroring `views/pages/main-page/main-page.pug` and its components.
-/// Team, blog and FAQ entries are a snapshot of what renovatori.ge loads from the database.
+/// Team entries are a snapshot of what renovatori.ge loads from the database.
 enum MainPageData {
     static let menu: [NavItem] = [
         NavItem(title: "კონსულტაცია", path: "/consultation", symbol: "bubble.left.and.bubble.right", route: .consultation),
@@ -139,18 +133,6 @@ enum MainPageData {
         NavItem(title: "პროექტები", path: "/projects", symbol: "hammer", route: .projects),
         NavItem(title: "ხშირად დასმული კითხვები", path: "/faq", symbol: "questionmark.circle", route: .faq),
         NavItem(title: "კონტაქტი", path: "/contact", symbol: "phone", route: .contact),
-    ]
-
-    static let footerLinks: [NavItem] = [
-        NavItem(title: "მთავარი", path: "/"),
-        NavItem(title: "კონსულტაცია", path: "/consultation"),
-        NavItem(title: "ჩვენ შესახებ", path: "/about"),
-        NavItem(title: "ფასები", path: "/prices"),
-        NavItem(title: "ბლოგი", path: "/blog-list"),
-        NavItem(title: "ხ.დ.კ.", path: "/faq"),
-        NavItem(title: "კონტაქტი", path: "/contact"),
-        NavItem(title: "ქუქის პოლიტიკა", path: "/cookies-policy"),
-        NavItem(title: "კონფიდენციალურობა", path: "/privacy-policy"),
     ]
 
     static let services: [Service] = [
@@ -187,9 +169,9 @@ enum MainPageData {
     ]
 
     static let pricePackages: [PricePackage] = [
-        PricePackage(title: "მწვანე კარკასი", pricePerSquareMeter: 550, url: URL(string: "https://renovatori.ge/blog/693e40002ed62d127ab05108")!),
-        PricePackage(title: "თეთრი კარკასი", pricePerSquareMeter: 600, url: URL(string: "https://renovatori.ge/blog/693e40342ed62d127ab0510e")!),
-        PricePackage(title: "შავი კარკასი", pricePerSquareMeter: 700, url: URL(string: "https://renovatori.ge/blog/693d8d61291bc84d00b6f427")!),
+        PricePackage(title: "მწვანე კარკასი", pricePerSquareMeter: 550, blogID: "693e40002ed62d127ab05108"),
+        PricePackage(title: "თეთრი კარკასი", pricePerSquareMeter: 600, blogID: "693e40342ed62d127ab0510e"),
+        PricePackage(title: "შავი კარკასი", pricePerSquareMeter: 700, blogID: "693d8d61291bc84d00b6f427"),
     ]
 
     static let priceRows: [PriceRow] = [
@@ -242,37 +224,6 @@ enum MainPageData {
         Partner(name: "გიორგი", profession: "სანტექნიკი, ბოილერის სპეციალისტი, ჩასაშენებელი უნიტაზის სპეციალისტი", imageURL: nil),
         Partner(name: "ზურა", profession: "ფრანგული ჭერის სპეციალისტი", imageURL: upload("1776793971446-594387919.jpg")),
         Partner(name: "თორნიკე", profession: "ელექტრიკოსი", imageURL: nil),
-    ]
-
-    static let faqs: [FAQItem] = [
-        FAQItem(
-            question: "რა არის რემონტის კალკულატორი?",
-            answer: "რემონტის კალკულატორი არის ონლაინ ინსტრუმენტი, რომელიც დაგეხმარებათ წინასწარ დააანგარიშოთ ბინის, სახლის ან კომერციული ფართის რემონტის სავარაუდო ღირებულება. კალკულატორი ითვალისწინებს სხვადასხვა ტიპის სამუშაოებს — როგორიცაა ელექტროობა, სანტექნიკა, ლესვა, მოპირკეთება, ჭერის მოწყობა, იატაკი, აბაზანა და სხვა სარემონტო პროცესები."
-        ),
-        FAQItem(
-            question: "რას მოიცავს რემონტის კონსულტაცია?",
-            answer: "რემონტის კონსულტაცია არის პროფესიონალური მომსახურება, რომელიც დაგეხმარებათ რემონტის სწორად დაგეგმვაში, ბიუჯეტის განსაზღვრასა და ტექნიკური გადაწყვეტილებების მიღებაში. კონსულტაციის ფარგლებში ხდება ობიექტის შეფასება, საჭირო სამუშაოების განსაზღვრა და დეტალური რეკომენდაციების გაცემა, რათა თავიდან აიცილოთ გაუთვალისწინებელი ხარჯები და არასწორი დაგეგმვა."
-        ),
-        FAQItem(
-            question: "როგორი მასალებით ვმუშაობთ?",
-            answer: "ჩვენ ვირჩევთ მხოლოდ მაღალხარისხიან მასალებს, რომლებიც კარგად გამოცდილია ბაზარზე და უზრუნველყოფენ პროექტის გრძელვადიან, ხარისხიან შესრულებას.\nჩვენი მიზანია, მომხმარებელი მიიღოს რემონტი, რომელიც არა მხოლოდ ლამაზია, არამედ გამძლე."
-        ),
-        FAQItem(
-            question: "ჩვენი მომსახურების არეალი",
-            answer: "ჩვენი კომპანია მომსახურებას უზრუნველყოფს თბილისის ტერიტორიაზე და მის შემოგარენში.\nსაჭიროების შემთხვევაში შესაძლებელია შეთანხმებით სხვა რაიონებში ვიზიტი."
-        ),
-        FAQItem(
-            question: "რა დრო სჭირდება პროექტის ჩაბარებას?",
-            answer: "პროექტის დასრულების დრო დამოკიდებულია მისი სირთულეზე და მოცულობაზე.\nმარტივი სამუშაოების დასრულება შეიძლება მოკლე დროში, რთული პროექტებისთვის კი დროის აღება საჭირო ხდება დეტალური დაგეგმვით, რათა შედეგი იყოს მაღალი ხარისხის."
-        ),
-        FAQItem(
-            question: "გადახდის მეთოდები",
-            answer: "ჩვენი მომსახურების გადახდა მიმდინარეობს სამ ნაწილად: წინასწარი ვადით (პროექტის დაწყებამდე), პროცესში და ბოლო ნაწილი – სამუშაოების სრული დასრულების შემდეგ.\nეს მიდგომა უზრუნველყოფს კომფორტს მომხმარებლისთვის და მუშაობის გამჭვირვალობას."
-        ),
-        FAQItem(
-            question: "რა ღირს ჩვენი მომსახურება?",
-            answer: "ჩვენი მომსახურების ღირებულება მთლიანად დამოკიდებულია კონკრეტულ პროექტზე და მის სირთულეზე. თითოეული შეკვეთა განსხვავებულია – მასში შედის სამუშაოების მოცულობა, საჭირო მასალები, პროექტის სპეციფიკა და სხვა ფაქტორები, ამიტომ ფასის საბოლოო გამოთვლა ხდება ინდივიდუალურად.\nსაორიენტაციო ფასების გასაგებად შეგიძლიათ ეწვიოთ ჩვენი რემონტის ფასების გვერდს."
-        ),
     ]
 
     private static func upload(_ fileName: String) -> URL {

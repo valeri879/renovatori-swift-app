@@ -73,6 +73,7 @@ private struct HTMLWebView: UIViewRepresentable {
         configuration.dataDetectorTypes = [.link, .phoneNumber]
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         webView.scrollView.isScrollEnabled = false
         webView.isOpaque = false
         webView.backgroundColor = .clear
@@ -113,7 +114,7 @@ private struct HTMLWebView: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var loadedHTML: String?
         var openRoute: (AppRoute) -> Void = { _ in }
         private let height: Binding<CGFloat>
@@ -150,18 +151,35 @@ private struct HTMLWebView: UIViewRepresentable {
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
-            // The initial `loadHTMLString` is `.other`; a tapped site link opens its in-app screen,
-            // anything else opens in Safari / the dialer.
-            if navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url {
+            // Route site pages before checking the navigation type: new-window links and
+            // scripted navigations can arrive as `.other`. The initial HTML load has no route.
+            if let url = navigationAction.request.url, let route = AppRoute(siteURL: url) {
+                openRoute(route)
+                decisionHandler(.cancel)
+            } else if navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url {
+                UIApplication.shared.open(url)
+                decisionHandler(.cancel)
+            } else {
+                decisionHandler(.allow)
+            }
+        }
+
+        /// Handles links requesting a new window (`target="_blank"` or `window.open`).
+        /// Site pages use native navigation; external destinations use the system browser.
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            if let url = navigationAction.request.url {
                 if let route = AppRoute(siteURL: url) {
                     openRoute(route)
                 } else {
                     UIApplication.shared.open(url)
                 }
-                decisionHandler(.cancel)
-            } else {
-                decisionHandler(.allow)
             }
+            return nil
         }
     }
 }

@@ -17,7 +17,7 @@ struct ExpenseItemFormView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var expenseTypes: [ExpenseTypeOption] = []
-    /// Empty string means "no type", like the web's empty option.
+    /// Empty selection is the placeholder; a type must be chosen before saving.
     @State private var expenseTypeID: String
     @State private var expenseDate: Date
     @State private var amount: String
@@ -46,7 +46,7 @@ struct ExpenseItemFormView: View {
             ExpenseContextSection(expense: expense)
 
             Section {
-                FormFieldRow(title: "ხარჯის ტიპი", isRequired: false, error: fieldErrors[.expenseType]) {
+                FormFieldRow(title: "ხარჯის ტიპი", error: fieldErrors[.expenseType]) {
                     Picker("ხარჯის ტიპი", selection: $expenseTypeID) {
                         Text("აირჩიე ხარჯის ტიპი").tag("")
                         ForEach(expenseTypes) { type in
@@ -177,6 +177,10 @@ struct ExpenseItemFormView: View {
     private func submit() {
         errorMessage = nil
         fieldErrors = [:]
+        guard !expenseTypeID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            fieldErrors[.expenseType] = "ხარჯის ტიპი სავალდებულოა."
+            return
+        }
         guard let parsedAmount = Double.parseMoney(amount) else {
             fieldErrors[.amount] = amount.trimmingCharacters(in: .whitespaces).isEmpty ? "თანხა სავალდებულოა." : "თანხა არასწორია."
             return

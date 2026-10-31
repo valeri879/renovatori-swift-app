@@ -57,7 +57,7 @@ struct PriceComparison: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             ForEach(MainPageData.pricePackages) { package in
-                Link(destination: package.url) {
+                NavigationLink(value: AppRoute.blogPost(package.blogID)) {
                     VStack(spacing: 2) {
                         Text(package.shortTitle)
                             .font(.caption.bold())

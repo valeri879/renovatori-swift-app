@@ -6,6 +6,10 @@ import SwiftUI
 struct ExpenseDetailView: View {
     let id: String
 
+    private enum ScrollAnchor: Hashable {
+        case expenses
+    }
+
     private enum Sheet: Identifiable {
         case editProject, addExpense, addPayment
         case editExpense(ExpenseDetail.Item)
@@ -74,33 +78,41 @@ struct ExpenseDetailView: View {
 
     // MARK: Layout
 
-    /// A `List` (not a `ScrollView`) so payment and expense rows can have swipe actions.
+    /// A `List` keeps payment swipe actions and contains the native expense table.
     /// The top blocks are clear, inset-free rows, so they keep the card layout.
     private func detail(_ expense: ExpenseDetail) -> some View {
-        List {
-            Section {
-                Group {
-                    header(expense)
-                    if let notice {
-                        Label(notice, systemImage: "checkmark.circle.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(.green)
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-                            .transition(.opacity)
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    Group {
+                        header(expense)
+                        if let notice {
+                            Label(notice, systemImage: "checkmark.circle.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.green)
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                                .transition(.opacity)
+                        }
+                        finances(expense)
+                        projectInfo(expense)
+                        progress(expense)
+                        typeBreakdown(expense)
                     }
-                    finances(expense)
-                    projectInfo(expense)
-                    progress(expense)
-                    typeBreakdown(expense)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
-                .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                payments(expense)
+                expenseRows(expense)
+                    .id(ScrollAnchor.expenses)
             }
-            payments(expense)
-            expenseRows(expense)
+            .onChange(of: selectedType) { _, _ in
+                withAnimation {
+                    proxy.scrollTo(ScrollAnchor.expenses, anchor: .top)
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .listSectionSpacing(20)
@@ -363,16 +375,17 @@ struct ExpenseDetailView: View {
             if rows.isEmpty {
                 emptyRow("ხარჯის ჩანაწერები ჯერ არ დამატებულა.")
             } else {
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                    ExpenseItemRow(item: item, number: index + 1, isDeleting: deletingID == item.id) { tappedIndex in
-                        viewerImages = ImageViewerItem(images: item.images, startIndex: tappedIndex)
-                    }
-                    .rowActions(
-                        enabled: expense.permissions.canManage,
-                        edit: { sheet = .editExpense(item) },
-                        delete: { pendingDelete = .expense(item) }
-                    )
-                }
+                ExpenseTableView(
+                    items: rows,
+                    canManage: expense.permissions.canManage,
+                    deletingID: deletingID,
+                    edit: { sheet = .editExpense($0) },
+                    delete: { pendingDelete = .expense($0) },
+                    openImages: { viewerImages = ImageViewerItem(images: $0.images, startIndex: 0) }
+                )
+                .id(selectedType)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
             }
         } header: {
             VStack(alignment: .leading, spacing: 8) {
@@ -397,7 +410,7 @@ struct ExpenseDetailView: View {
             .listSectionHeader()
         } footer: {
             if expense.permissions.canManage && !expense.expenses.isEmpty {
-                Text("რედაქტირებისთვის ან წასაშლელად გადაასრიალეთ ჩანაწერი მარცხნივ.")
+                Text("რედაქტირებისთვის ან წასაშლელად გამოიყენეთ ჩანაწერის ⋯ მენიუ.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -578,60 +591,8 @@ private struct FinanceTile: View {
     }
 }
 
-/// An expense row: type, amount, date, comment and image thumbnails.
-private struct ExpenseItemRow: View {
-    let item: ExpenseDetail.Item
-    let number: Int
-    let isDeleting: Bool
-    let openImage: (Int) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("#\(number) · \(item.expenseType?.title ?? "-")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(item.amount.webMoney(fractionDigits: 2))
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.red)
-                }
-                Spacer()
-                Text(item.expenseDate.map(ExpenseDetailView.day) ?? "-")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if isDeleting {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-            if !item.comment.isEmpty {
-                Text(item.comment)
-                    .font(.footnote)
-            }
-            if !item.images.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(item.images.enumerated()), id: \.offset) { index, image in
-                            Button {
-                                openImage(index)
-                            } label: {
-                                RemoteImage(url: APIConfig.imageURL(image.thumbUrl))
-                                    .frame(width: 64, height: 48)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
 extension View {
-    /// Right-to-left swipe with „რედაქტირება" and „წაშლა" on expense and payment rows (admins only).
+    /// Right-to-left swipe with „რედაქტირება" and „წაშლა" on payment rows (admins only).
     /// Delete is tinted rather than `role: .destructive`, which would animate the row away
     /// before the confirmation dialog is answered.
     @ViewBuilder
