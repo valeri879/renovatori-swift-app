@@ -47,15 +47,36 @@ enum HTMLText {
 
 /// Renders a blog post's HTML body with WebKit, so images, lists and headings look like the site.
 /// Grows to fit its content. Links to renovatori.ge pages the app has open those screens;
-/// other links open outside the app.
+/// `#section` links scroll the surrounding `ScrollView` to that section; other links open
+/// outside the app.
 struct HTMLContentView: View {
     let html: String
     @Environment(\.appNavigation) private var navigation
     @State private var height: CGFloat = 1
+    /// Distance of the last requested section from the top of the content.
+    @State private var anchorOffset: CGFloat = 0
+
+    private static let anchorID = "html-content-anchor"
 
     var body: some View {
-        HTMLWebView(html: html, height: $height, openRoute: navigation.open)
+        ScrollViewReader { proxy in
+            HTMLWebView(html: html, height: $height, openRoute: navigation.open) { offset in
+                anchorOffset = offset
+                // The marker has to move first; `scrollTo` reads its laid-out position.
+                DispatchQueue.main.async {
+                    withAnimation {
+                        proxy.scrollTo(Self.anchorID, anchor: .top)
+                    }
+                }
+            }
             .frame(height: height)
+            .overlay(alignment: .top) {
+                Color.clear
+                    .frame(height: 1)
+                    .id(Self.anchorID)
+                    .padding(.top, anchorOffset)
+            }
+        }
     }
 }
 
@@ -63,6 +84,7 @@ private struct HTMLWebView: UIViewRepresentable {
     let html: String
     @Binding var height: CGFloat
     let openRoute: (AppRoute) -> Void
+    let scrollToOffset: (CGFloat) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(height: $height)
@@ -83,6 +105,7 @@ private struct HTMLWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.openRoute = openRoute
+        context.coordinator.scrollToOffset = scrollToOffset
         guard context.coordinator.loadedHTML != html else { return }
         context.coordinator.loadedHTML = html
         // Relative `/uploads/...` images resolve against the API origin.
@@ -117,6 +140,7 @@ private struct HTMLWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var loadedHTML: String?
         var openRoute: (AppRoute) -> Void = { _ in }
+        var scrollToOffset: (CGFloat) -> Void = { _ in }
         private let height: Binding<CGFloat>
 
         init(height: Binding<CGFloat>) {
@@ -146,14 +170,42 @@ private struct HTMLWebView: UIViewRepresentable {
             }
         }
 
+        /// The section a link points at, when it stays on the loaded document (`href="#floor"`).
+        private func sectionName(of url: URL, in webView: WKWebView) -> String? {
+            guard let fragment = url.fragment(percentEncoded: false), !fragment.isEmpty,
+                  let current = webView.url,
+                  url.absoluteString.split(separator: "#").first == current.absoluteString.split(separator: "#").first
+            else { return nil }
+            return fragment
+        }
+
+        /// Web view scrolling is off, so the section's position goes to the enclosing `ScrollView`.
+        /// CMS anchors are written both as `<a id>` and as `<a name>`.
+        private func scrollToSection(_ name: String, in webView: WKWebView) {
+            let script = """
+                const target = document.getElementById(name) ?? document.getElementsByName(name)[0];
+                return target ? target.getBoundingClientRect().top + window.scrollY : null;
+                """
+            webView.callAsyncJavaScript(script, arguments: ["name": name], in: nil, in: .page) { [weak self] result in
+                guard case .success(let value) = result, let offset = value as? CGFloat else { return }
+                self?.scrollToOffset(offset)
+            }
+        }
+
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
+            // A section link would otherwise reach the external branch below as a link to the site root.
+            if navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url,
+               let section = sectionName(of: url, in: webView) {
+                scrollToSection(section, in: webView)
+                decisionHandler(.cancel)
             // Route site pages before checking the navigation type: new-window links and
             // scripted navigations can arrive as `.other`. The initial HTML load has no route.
-            if let url = navigationAction.request.url, let route = AppRoute(siteURL: url) {
+            } else if let url = navigationAction.request.url, let route = AppRoute(siteURL: url) {
                 openRoute(route)
                 decisionHandler(.cancel)
             } else if navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url {

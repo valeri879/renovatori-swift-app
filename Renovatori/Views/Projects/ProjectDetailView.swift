@@ -116,6 +116,14 @@ struct ProjectDetailView: View {
         .fullScreenCover(item: $viewer) { position in
             ImageViewer(images: position.images, startIndex: position.index)
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: SiteInfo.page("/project/\(project.id)")) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("გაზიარება")
+            }
+        }
         .sheet(item: $historySheet) { sheet in
             NavigationStack {
                 switch sheet {
