@@ -132,6 +132,8 @@ struct BlogSummary: Decodable, Identifiable, Hashable {
 
 /// `GET /blog/:id` → `{ blog }`. `description` is HTML.
 struct BlogDetail: Decodable, Identifiable, Hashable {
+    /// False when the admin hid the cover on the detail page; missing on older servers (shown).
+    let showCoverOnDetail: Bool?
     let id: String
     let title: String
     let description: String

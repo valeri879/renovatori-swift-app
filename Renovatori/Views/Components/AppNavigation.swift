@@ -8,6 +8,8 @@ struct AppNavigation {
     /// Shows the login sheet. After a successful sign-in, `destination` is opened
     /// (the profile when it is nil).
     var signIn: (_ destination: AppRoute?) -> Void = { _ in }
+    /// Closes every screen and returns to the main page.
+    var goHome: () -> Void = {}
 }
 
 private struct AppNavigationKey: EnvironmentKey {

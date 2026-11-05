@@ -21,6 +21,14 @@ struct PricesView: View {
         }
         .navigationTitle("ფასები")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: SiteInfo.page("/prices")) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("გაზიარება")
+            }
+        }
     }
 
     /// The site's warning alert: prices are indicative, with a shortcut to the calculator.

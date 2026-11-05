@@ -8,6 +8,14 @@ struct FAQView: View {
         content
             .navigationTitle("ხ.დ.კ.")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: SiteInfo.page("/faq")) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("გაზიარება")
+                }
+            }
             .task { await model.loadIfNeeded() }
     }
 

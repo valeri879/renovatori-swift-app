@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// "კალკულატორი" (`views/pages/calculator-page`): a six-step form that posts to `POST /calculator`.
+/// "კალკულატორი" (`views/pages/calculator-page`): a seven-step form that posts to `POST /calculator`.
 struct CalculatorView: View {
+    @EnvironmentObject private var auth: AuthViewModel
     @StateObject private var form = CalculatorForm()
     @State private var isSubmitting = false
     @State private var submitError: APIError?
@@ -46,6 +47,12 @@ struct CalculatorView: View {
                 Button("მზადაა") { Self.dismissKeyboard() }
             }
         }
+        // Like the web, a signed-in user's 9-digit phone is filled in for the last step.
+        .onAppear {
+            if form.phoneNumber.isEmpty, let phone = auth.currentUser?.phoneNumber, phone.wholeMatch(of: /\d{9}/) != nil {
+                form.phoneNumber = phone
+            }
+        }
         .navigationDestination(item: $submission) { submission in
             CalculatorResultView(submission: submission)
         }
@@ -78,29 +85,18 @@ struct CalculatorView: View {
     @ViewBuilder
     private var stepContent: some View {
         switch form.step {
-        case .contact: contactStep
+        case .area: areaStep
         case .building: buildingStep
         case .installations: installationsStep
         case .demolition: demolitionStep
         case .rooms: roomsStep
         case .bathrooms: bathroomsStep
+        case .phone: phoneStep
         }
     }
 
-    private var contactStep: some View {
+    private var areaStep: some View {
         VStack(alignment: .leading, spacing: 20) {
-            CalculatorField(
-                title: "📱 თქვენი ტელეფონის ნომერი",
-                hint: "ჩაწერე თქვენი აქტიური ტელეფონის ნომერი +995 ფორმატის გარეშე, მაგალითად 579123123",
-                placeholder: "მაგ: 579123123",
-                text: $form.phoneNumber,
-                keyboard: .numberPad,
-                error: form.phoneError
-            )
-            .onChange(of: form.phoneNumber) { _, value in
-                let digits = String(value.filter(\.isNumber).prefix(9))
-                if digits != value { form.phoneNumber = digits }
-            }
             CalculatorField(
                 title: "📐 სახლის ფართობი (გარდა აივნისა)",
                 hint: "ჩაწერეთ თქვენი ბინის სრული ფართობი, იმ შეთხვევაში თუ გეგმავთ აბაზანის რემონტსაც - თუ არა, ჩაწერეთ აბაზანის ფართობის გამოკლებით.",
@@ -118,6 +114,22 @@ struct CalculatorView: View {
                 keyboard: .numberPad,
                 error: form.integerError(form.floor)
             )
+        }
+    }
+
+    private var phoneStep: some View {
+        CalculatorField(
+            title: "📱 თქვენი ტელეფონის ნომერი",
+            hint: "ბოლო ნაბიჯი: ჩაწერე თქვენი აქტიური ტელეფონის ნომერი +995 ფორმატის გარეშე, მაგალითად 579123123. ფასის დადგენის შემდეგ საჭიროების შემთხვევაში დაგიკავშირდებით.",
+            placeholder: "მაგ: 579123123",
+            text: $form.phoneNumber,
+            keyboard: .numberPad,
+            error: form.phoneError
+        )
+        .textContentType(.telephoneNumber)
+        .onChange(of: form.phoneNumber) { _, value in
+            let digits = String(value.filter(\.isNumber).prefix(9))
+            if digits != value { form.phoneNumber = digits }
         }
     }
 
@@ -553,4 +565,5 @@ private struct BathroomCard: View {
     NavigationStack {
         CalculatorView()
     }
+    .environmentObject(AuthViewModel())
 }

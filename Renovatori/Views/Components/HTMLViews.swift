@@ -47,11 +47,12 @@ enum HTMLText {
 
 /// Renders a blog post's HTML body with WebKit, so images, lists and headings look like the site.
 /// Grows to fit its content. Links to renovatori.ge pages the app has open those screens;
-/// `#section` links scroll the surrounding `ScrollView` to that section; other links open
-/// outside the app.
+/// `#section` links scroll the surrounding `ScrollView` to that section; other links go to
+/// the `openURL` action.
 struct HTMLContentView: View {
     let html: String
     @Environment(\.appNavigation) private var navigation
+    @Environment(\.openURL) private var openURL
     @State private var height: CGFloat = 1
     /// Distance of the last requested section from the top of the content.
     @State private var anchorOffset: CGFloat = 0
@@ -60,7 +61,7 @@ struct HTMLContentView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            HTMLWebView(html: html, height: $height, openRoute: navigation.open) { offset in
+            HTMLWebView(html: html, height: $height, openRoute: navigation.open, openExternal: { openURL($0) }) { offset in
                 anchorOffset = offset
                 // The marker has to move first; `scrollTo` reads its laid-out position.
                 DispatchQueue.main.async {
@@ -84,6 +85,7 @@ private struct HTMLWebView: UIViewRepresentable {
     let html: String
     @Binding var height: CGFloat
     let openRoute: (AppRoute) -> Void
+    let openExternal: (URL) -> Void
     let scrollToOffset: (CGFloat) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -105,6 +107,7 @@ private struct HTMLWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.openRoute = openRoute
+        context.coordinator.openExternal = openExternal
         context.coordinator.scrollToOffset = scrollToOffset
         guard context.coordinator.loadedHTML != html else { return }
         context.coordinator.load(html, in: webView)
@@ -138,6 +141,7 @@ private struct HTMLWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var loadedHTML: String?
         var openRoute: (AppRoute) -> Void = { _ in }
+        var openExternal: (URL) -> Void = { _ in }
         var scrollToOffset: (CGFloat) -> Void = { _ in }
         private let height: Binding<CGFloat>
 
@@ -219,7 +223,7 @@ private struct HTMLWebView: UIViewRepresentable {
                 openRoute(route)
                 decisionHandler(.cancel)
             } else if navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url {
-                UIApplication.shared.open(url)
+                openExternal(url)
                 decisionHandler(.cancel)
             } else {
                 decisionHandler(.allow)
@@ -227,7 +231,7 @@ private struct HTMLWebView: UIViewRepresentable {
         }
 
         /// Handles links requesting a new window (`target="_blank"` or `window.open`).
-        /// Site pages use native navigation; external destinations use the system browser.
+        /// Site pages use native navigation; external destinations use `openExternal`.
         func webView(
             _ webView: WKWebView,
             createWebViewWith configuration: WKWebViewConfiguration,
@@ -238,7 +242,7 @@ private struct HTMLWebView: UIViewRepresentable {
                 if let route = AppRoute(siteURL: url) {
                     openRoute(route)
                 } else {
-                    UIApplication.shared.open(url)
+                    openExternal(url)
                 }
             }
             return nil

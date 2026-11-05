@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// "კონტაქტი" screen (`views/pages/contact-page/contact-page.pug`): hours, phone, email and social links.
+/// "კონტაქტი" screen (`views/pages/contact-page/contact-page.pug`): hours, phones, emails, social links
+/// and the call request form.
 struct ContactView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.siteContacts) private var contacts
 
     var body: some View {
         List {
@@ -24,40 +26,70 @@ struct ContactView: View {
             }
 
             Section("სამუშაო საათები") {
-                Label {
-                    Text("ორშაბათი - პარასკევი, ") + Text("10:00-18:00").bold()
-                } icon: {
-                    AssetIcon(name: "clock", size: 18)
-                        .foregroundStyle(.tint)
+                ForEach(contacts.workingHours) { hours in
+                    Label {
+                        Text("\(hours.daysLabel), ") + Text("\(hours.opensAt)-\(hours.closesAt)").bold()
+                    } icon: {
+                        AssetIcon(name: "clock", size: 18)
+                            .foregroundStyle(.tint)
+                    }
                 }
             }
 
             Section("ტელეფონი") {
-                ContactButton(action: .call) {
-                    Label { Text(SiteInfo.phoneDisplay) } icon: { AssetIcon(name: "phone", size: 18) }
+                ForEach(contacts.phones) { phone in
+                    ContactButton(action: .call(phone)) {
+                        Label { labeled(phone.display, phone.label) } icon: { AssetIcon(name: "phone", size: 18) }
+                    }
                 }
             }
 
             Section("ელ-ფოსტა") {
-                ContactButton(action: .email) {
-                    Label { Text(SiteInfo.email) } icon: { AssetIcon(name: "envelope", size: 18) }
+                ForEach(contacts.emails) { email in
+                    ContactButton(action: .email(email.email)) {
+                        Label { labeled(email.email, email.label) } icon: { AssetIcon(name: "envelope", size: 18) }
+                    }
                 }
             }
 
-            Section("სოციალური ქსელები") {
-                socialLink("Facebook", icon: "facebook-black", url: SiteInfo.facebookURL)
-                socialLink("Instagram", icon: "instagram-black", url: SiteInfo.instagramURL)
-                socialLink("TikTok", icon: "tiktok-black", url: SiteInfo.tiktokURL)
+            if !contacts.socialLinks.isEmpty {
+                Section("სოციალური ქსელები") {
+                    ForEach(contacts.socialLinks) { link in
+                        if let url = link.link {
+                            socialLink(link, url: url)
+                        }
+                    }
+                }
+            }
+
+            // Like the web, the call request form is reachable at any time of day.
+            Section {
+                NavigationLink(value: AppRoute.callRequest) {
+                    Label("ზარის მოთხოვნა", systemImage: "phone.arrow.down.left")
+                }
             }
         }
         .navigationTitle("კონტაქტი")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: SiteInfo.page("/contact")) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("გაზიარება")
+            }
+        }
     }
 
-    private func socialLink(_ title: String, icon: String, url: URL) -> some View {
+    /// A phone or address followed by its grey label, e.g. "(ოფისი)".
+    private func labeled(_ value: String, _ label: String) -> Text {
+        label.isEmpty ? Text(value) : Text(value) + Text(" (\(label))").foregroundColor(.secondary)
+    }
+
+    private func socialLink(_ link: SiteContacts.SocialLink, url: URL) -> some View {
         Link(destination: url) {
             HStack {
-                Label { Text(title) } icon: { AssetIcon(name: icon, size: 18) }
+                Label { Text(link.title) } icon: { SocialIcon(link: link, size: 18) }
                 Spacer()
                 Image(systemName: "arrow.up.right")
                     .font(.footnote)

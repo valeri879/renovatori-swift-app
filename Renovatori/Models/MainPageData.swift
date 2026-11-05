@@ -1,15 +1,8 @@
 import Foundation
 
-/// Contact details and links shared by the header, cover and footer.
+/// The website the app mirrors. Phones, emails and social links come from `SiteContacts`.
 enum SiteInfo {
     static let baseURL = URL(string: "https://renovatori.ge")!
-    static let phoneDisplay = "+995 579 37 33 73"
-    static let phoneURL = URL(string: "tel:+995579373373")!
-    static let email = "info@renovatori.ge"
-    static let emailURL = URL(string: "mailto:info@renovatori.ge")!
-    static let facebookURL = URL(string: "https://www.facebook.com/profile.php?id=61582501894965")!
-    static let instagramURL = URL(string: "https://www.instagram.com/renovatori/")!
-    static let tiktokURL = URL(string: "https://www.tiktok.com/@renovatori")!
 
     static func page(_ path: String) -> URL {
         baseURL.appending(path: path)
@@ -31,6 +24,8 @@ enum AppRoute: Hashable {
     /// Booking form, preselected with a package name from `ConsultationPageData.packages`.
     case consultationOrder(String)
     case contact
+    /// "ზარის მოთხოვნა": phone links open it outside working hours.
+    case callRequest
     case emailVerification
     case passwordChange
     /// "ჩემი პროექტები": projects linked to the signed-in user.
@@ -68,6 +63,7 @@ enum AppRoute: Hashable {
         case ("calculator", 1): self = .calculator
         case ("consultation", 1): self = .consultation
         case ("contact", 1): self = .contact
+        case ("call-request", 1): self = .callRequest
         default: return nil
         }
     }

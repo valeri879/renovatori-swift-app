@@ -19,6 +19,14 @@ struct AboutView: View {
         }
         .navigationTitle("ჩვენ შესახებ")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: SiteInfo.page("/about")) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("გაზიარება")
+            }
+        }
     }
 
     // MARK: Values

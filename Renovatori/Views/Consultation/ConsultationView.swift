@@ -24,6 +24,14 @@ struct ConsultationView: View {
         }
         .navigationTitle("კონსულტაცია")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: SiteInfo.page("/consultation")) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("გაზიარება")
+            }
+        }
     }
 
     private enum PricingAnchor {

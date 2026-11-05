@@ -26,19 +26,20 @@ struct AssetIcon: View {
 
 /// How to reach the company, with the copy shown when the device can't handle the link.
 enum ContactAction {
-    case call, email
+    case call(SiteContacts.Phone)
+    case email(String)
 
-    var url: URL {
+    var url: URL? {
         switch self {
-        case .call: SiteInfo.phoneURL
-        case .email: SiteInfo.emailURL
+        case .call(let phone): URL(string: "tel:\(phone.dial)")
+        case .email(let address): URL(string: "mailto:\(address)")
         }
     }
 
     var value: String {
         switch self {
-        case .call: SiteInfo.phoneDisplay
-        case .email: SiteInfo.email
+        case .call(let phone): phone.display
+        case .email(let address): address
         }
     }
 
@@ -65,6 +66,7 @@ enum ContactAction {
 }
 
 /// Opens the dialer (`tel:`) or a new message in the mail app (`mailto:`). iOS confirms a call itself.
+/// Like the web, a phone opens the call request form outside working hours instead of calling.
 /// When nothing can handle the link (the simulator, an iPad without calling, no mail app),
 /// an alert shows the number or address with a copy button instead.
 struct ContactButton<Content: View>: View {
@@ -72,11 +74,21 @@ struct ContactButton<Content: View>: View {
     @ViewBuilder let label: Content
 
     @Environment(\.openURL) private var openURL
+    @Environment(\.siteContacts) private var contacts
+    @Environment(\.appNavigation) private var navigation
     @State private var isUnavailable = false
 
     var body: some View {
         Button {
-            openURL(action.url) { accepted in
+            if case .call = action, !contacts.isOpen() {
+                navigation.open(.callRequest)
+                return
+            }
+            guard let url = action.url else {
+                isUnavailable = true
+                return
+            }
+            openURL(url) { accepted in
                 if !accepted {
                     isUnavailable = true
                 }

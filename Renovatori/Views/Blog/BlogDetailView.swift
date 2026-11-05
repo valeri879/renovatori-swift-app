@@ -25,7 +25,8 @@ struct BlogDetailView: View {
             let blog = response.blog
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if let cover = APIConfig.imageURL(blog.coverImageUrl) {
+                    // The cover stays in lists and previews even when it is hidden here.
+                    if blog.showCoverOnDetail != false, let cover = APIConfig.imageURL(blog.coverImageUrl) {
                         Color.clear
                             .aspectRatio(16 / 9, contentMode: .fit)
                             .overlay { RemoteImage(url: cover, fallbackAsset: "cover.jpg") }

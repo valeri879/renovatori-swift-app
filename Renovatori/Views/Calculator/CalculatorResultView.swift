@@ -4,6 +4,7 @@ import SwiftUI
 /// the client total, price per m², what the money pays for, and the entered parameters.
 struct CalculatorResultView: View {
     let submission: CalculatorSubmission
+    @Environment(\.siteContacts) private var contacts
 
     private var result: CalculationResult { submission.result }
     private var request: CalculationRequest { submission.request }
@@ -122,11 +123,13 @@ struct CalculatorResultView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                ContactButton(action: .call) {
-                    Label("დაგვიკავშირდით", systemImage: "phone")
-                        .frame(maxWidth: .infinity)
+                if let phone = contacts.mainPhone {
+                    ContactButton(action: .call(phone)) {
+                        Label("დაგვიკავშირდით", systemImage: "phone")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.bordered)
             }
             .controlSize(.regular)
             .font(.subheadline)

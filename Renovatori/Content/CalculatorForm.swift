@@ -1,20 +1,22 @@
 import Foundation
 
-/// Inputs of the calculator form (`views/pages/calculator-page`), split into the site's six steps.
+/// Inputs of the calculator form (`views/pages/calculator-page`), split into the site's seven steps.
 /// Text fields stay strings while editing; `makeRequest()` validates and converts them.
 @MainActor
 final class CalculatorForm: ObservableObject {
     enum Step: Int, CaseIterable {
-        case contact = 1, building, installations, demolition, rooms, bathrooms
+        /// The phone is asked last, after the visitor has invested in the form, like the web.
+        case area = 1, building, installations, demolition, rooms, bathrooms, phone
 
         var title: String {
             switch self {
-            case .contact: "კონტაქტი და ფართობი"
+            case .area: "ფართობი და სართული"
             case .building: "შენობა"
             case .installations: "კარები და გათბობა"
             case .demolition: "დემონტაჟი"
             case .rooms: "მდგომარეობა და ოთახები"
             case .bathrooms: "აბაზანები"
+            case .phone: "ტელეფონის ნომერი"
             }
         }
     }
@@ -100,7 +102,7 @@ final class CalculatorForm: ObservableObject {
         static let fields = "698c9a0229b6ab9da1589692"
     }
 
-    @Published var step: Step = .contact
+    @Published var step: Step = .area
     /// Set after the user tries to leave a step with missing values, so errors show only then.
     @Published var showsErrors = false
 
@@ -118,8 +120,8 @@ final class CalculatorForm: ObservableObject {
     @Published var rooms = [RoomInput()]
     @Published var bathrooms = [BathroomInput()]
 
-    var isFirstStep: Bool { step == .contact }
-    var isLastStep: Bool { step == .bathrooms }
+    var isFirstStep: Bool { step == .area }
+    var isLastStep: Bool { step == .phone }
     var progress: Double { Double(step.rawValue) / Double(Step.allCases.count) }
 
     // MARK: Validation
@@ -147,8 +149,8 @@ final class CalculatorForm: ObservableObject {
 
     private func isValid(_ step: Step) -> Bool {
         switch step {
-        case .contact:
-            phoneNumber.wholeMatch(of: /\d{9}/) != nil && Self.number(totalArea) != nil && Self.integer(floor) != nil
+        case .area:
+            Self.number(totalArea) != nil && Self.integer(floor) != nil
         case .building:
             Self.number(height) != nil && Self.integer(wetAreas) != nil
         case .installations:
@@ -163,6 +165,8 @@ final class CalculatorForm: ObservableObject {
             bathrooms.allSatisfy { bathroom in
                 Self.number(bathroom.area) != nil && Self.number(bathroom.perimeter) != nil && Self.integer(bathroom.electricalPoints) != nil
             }
+        case .phone:
+            phoneNumber.wholeMatch(of: /\d{9}/) != nil
         }
     }
 
