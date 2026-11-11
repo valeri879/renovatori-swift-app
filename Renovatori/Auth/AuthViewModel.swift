@@ -12,6 +12,9 @@ final class AuthViewModel: ObservableObject {
     }
 
     @Published private(set) var state: State = .loading
+    /// Set by `deleteAccount`, so the deletion screen can show its result after the sign-out
+    /// rebuilds the navigation stack (and the screen's own state with it).
+    @Published private(set) var accountWasDeleted = false
 
     private let client: APIClient
     private let tokenStore: TokenStore
@@ -157,8 +160,26 @@ final class AuthViewModel: ObservableObject {
         signIn(with: bundle)
     }
 
+    /// Permanently deletes the account (the password is asked again). The server also removes this
+    /// device's push registration and every session, so the app only forgets the tokens.
+    func deleteAccount(password: String) async throws {
+        _ = try await client.send(
+            Endpoint(
+                method: .post,
+                path: "auth/account-deletion",
+                body: AccountDeletionRequest(password: password),
+                requiresAuth: true
+            ),
+            as: AccountDeletionResponse.self
+        )
+        tokenStore.clear()
+        accountWasDeleted = true
+        state = .unauthenticated
+    }
+
     private func signIn(with bundle: TokenBundle) {
         tokenStore.save(accessToken: bundle.accessToken, refreshToken: bundle.refreshToken)
+        accountWasDeleted = false
         state = .authenticated(bundle.user)
     }
 }

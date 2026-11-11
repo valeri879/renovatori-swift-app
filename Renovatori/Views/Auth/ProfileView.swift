@@ -98,6 +98,13 @@ struct ProfileView: View {
                 }
                 .disabled(isLoggingOut)
             }
+
+            Section {
+                NavigationLink(value: AppRoute.accountDeletion) {
+                    Label("ანგარიშის წაშლა", systemImage: "person.crop.circle.badge.minus")
+                        .foregroundStyle(.red)
+                }
+            }
         }
         .refreshable {
             try? await auth.reloadUser()

@@ -41,6 +41,10 @@ struct FooterView: View {
             .tint(.red)
             #endif
 
+            // App Store review needs the privacy policy reachable inside the app; it opens in the in-app browser.
+            Link("კონფიდენციალურობის პოლიტიკა", destination: SiteInfo.page("/privacy-policy"))
+                .font(.footnote)
+
             VStack(spacing: 4) {
                 Text("პროგრამულ მხარდაჭერას უზრუნველყოფს [Val Do](https://val-do.com)")
                 Text("©Renovatori.ge \(year) წელი")

@@ -75,6 +75,14 @@ struct SentResponse: Decodable {
     let sent: Bool
 }
 
+struct AccountDeletionRequest: Encodable {
+    let password: String
+}
+
+struct AccountDeletionResponse: Decodable {
+    let deleted: Bool
+}
+
 struct PasswordResetResponse: Decodable {
     let passwordReset: Bool
 }

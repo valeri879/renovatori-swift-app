@@ -28,6 +28,9 @@ enum AppRoute: Hashable {
     case callRequest
     case emailVerification
     case passwordChange
+    /// "ანგარიშის წაშლა". Not in `requiresAccount`: it stays open after the deletion signs the user out,
+    /// to show the result.
+    case accountDeletion
     /// "ჩემი პროექტები": projects linked to the signed-in user.
     case myProjects
     /// Admin: expense projects (`/admin/expenses-list`). Staff only.

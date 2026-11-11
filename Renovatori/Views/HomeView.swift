@@ -183,6 +183,8 @@ extension HomeView {
             EmailVerificationView()
         case .passwordChange:
             PasswordChangeView()
+        case .accountDeletion:
+            AccountDeletionView()
         case .myProjects:
             MyProjectsView()
         case .expenses:
