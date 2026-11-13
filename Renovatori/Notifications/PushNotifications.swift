@@ -4,7 +4,7 @@ import UserNotifications
 
 /// Push notifications from the server (e.g. „დაემატა პროექტის ისტორია"). After sign-in the app asks
 /// for permission, registers with APNs and sends the device token to `PUT /profile/devices`;
-/// sign-out removes it. Tapping a notification that carries a `projectId` opens that project.
+/// sign-out removes it. Tapping a notification opens its `projectId` project or `blogId` article.
 @MainActor
 final class PushNotifications: NSObject, ObservableObject {
     static let shared = PushNotifications()
@@ -82,14 +82,22 @@ extension PushNotifications: UNUserNotificationCenterDelegate {
         [.banner, .list, .sound]
     }
 
-    /// The user tapped a notification: open the project it is about.
+    /// The user tapped a notification: open the project (`projectId`) or blog article (`blogId`) it is about.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard let projectID = response.notification.request.content.userInfo["projectId"] as? String else { return }
+        let userInfo = response.notification.request.content.userInfo
+        let route: AppRoute
+        if let projectID = userInfo["projectId"] as? String {
+            route = .project(projectID)
+        } else if let blogID = userInfo["blogId"] as? String {
+            route = .blogPost(blogID)
+        } else {
+            return
+        }
         await MainActor.run {
-            pendingRoute = .project(projectID)
+            pendingRoute = route
         }
     }
 }

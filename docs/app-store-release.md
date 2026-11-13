@@ -53,7 +53,7 @@ appstoreconnect.apple.com → **Apps → + → New App**:
   - პროექტები
   - ფასები
   - ბლოგი
-- **Description, Keywords, Promotional text** — ქართულად.
+- **Description, Keywords, Promotional text** — ინგლისურად. App Store-ს ქართული ენა არ აქვს, English (U.S.) ველები კი ქართულ ასოებს არ იღებს. Screenshot-ები: `docs/app-store-screenshots/6.3-inch/` (1206×2622).
 - **Support URL:** `https://renovatori.ge/contact`
 - **Marketing URL:** `https://renovatori.ge`
 - **Privacy Policy URL:** `https://renovatori.ge/privacy-policy`
