@@ -20,6 +20,8 @@ enum AppRoute: Hashable {
     case blog
     case blogPost(String)
     case calculator
+    /// The calculator's result. A route like the others, so its buttons can push further screens.
+    case calculatorResult(CalculatorSubmission)
     case consultation
     /// Booking form, preselected with a package name from `ConsultationPageData.packages`.
     case consultationOrder(String)

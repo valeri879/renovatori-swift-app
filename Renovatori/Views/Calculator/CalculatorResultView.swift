@@ -13,6 +13,7 @@ struct CalculatorResultView: View {
         ScrollView {
             VStack(spacing: 20) {
                 totalCard
+                shareButton
                 breakdownCard
                 parametersCard
                 callToAction
@@ -21,6 +22,14 @@ struct CalculatorResultView: View {
         }
         .navigationTitle("შედეგი")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: shareURL, subject: Text("რემონტის ხარჯთაღრიცხვა"), message: Text(shareMessage)) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("შედეგის გაზიარება")
+            }
+        }
     }
 
     private var totalCard: some View {
@@ -116,20 +125,10 @@ struct CalculatorResultView: View {
             Text("დაჯავშნეთ უფასო კონსულტაცია და მიიღეთ ზუსტი შეფასება ჩვენი სპეციალისტისგან.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            HStack(spacing: 12) {
-                NavigationLink(value: AppRoute.consultation) {
-                    Label("კონსულტაციის დაჯავშნა", systemImage: "calendar.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-
-                if let phone = contacts.mainPhone {
-                    ContactButton(action: .call(phone)) {
-                        Label("დაგვიკავშირდით", systemImage: "phone")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                }
+            // Side by side while both labels fit on one line; stacked on narrow phones.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { actionButtons }
+                VStack(spacing: 10) { actionButtons }
             }
             .controlSize(.regular)
             .font(.subheadline)
@@ -137,6 +136,46 @@ struct CalculatorResultView: View {
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        NavigationLink(value: AppRoute.consultation) {
+            Label("კონსულტაციის დაჯავშნა", systemImage: "calendar.badge.plus")
+                .lineLimit(1)
+                .fixedSize()
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+
+        if let phone = contacts.mainPhone {
+            ContactButton(action: .call(phone)) {
+                Label("დაგვიკავშირდით", systemImage: "phone")
+                    .lineLimit(1)
+                    .fixedSize()
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var shareButton: some View {
+        ShareLink(item: shareURL, subject: Text("რემონტის ხარჯთაღრიცხვა"), message: Text(shareMessage)) {
+            Label("შედეგის გაზიარება", systemImage: "square.and.arrow.up")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+
+    /// The same result on the website (`/calculator/result/:id`), so it opens for anyone.
+    private var shareURL: URL {
+        SiteInfo.page("/calculator/result/\(result.resultId)")
+    }
+
+    private var shareMessage: String {
+        "რემონტის სავარაუდო ღირებულება: \(result.clientTotal.lariFormatted) "
+            + "(\(area(result.info.totalArea ?? request.totalArea)), 1 მ² — \(result.clientPricePerArea.lariFormatted))"
     }
 
     private func area(_ value: Double) -> String {

@@ -91,10 +91,15 @@ struct HomeView: View {
             signIn: { destination in showSignIn(then: destination) },
             goHome: { path.removeAll() }
         ))
-        // Web links stay in the in-app browser; phone and email links go to the system.
+        // renovatori.ge pages the app has (e.g. links in FAQ answers) open as app screens; other web links
+        // stay in the in-app browser; phone and email links go to the system.
         .environment(\.openURL, OpenURLAction { url in
             guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
                 return .systemAction
+            }
+            if let route = AppRoute(siteURL: url) {
+                path.append(route)
+                return .handled
             }
             webPage = WebPage(url: url)
             return .handled
@@ -171,6 +176,8 @@ extension HomeView {
             BlogDetailView(id: id)
         case .calculator:
             CalculatorView()
+        case .calculatorResult(let submission):
+            CalculatorResultView(submission: submission)
         case .consultation:
             ConsultationView()
         case .consultationOrder(let consultationType):
@@ -204,12 +211,13 @@ extension HomeView {
         }
     }
 
-    /// The calculator and the expense project have their own buttons at the bottom; while typing the
+    /// The calculator and the expense project have their own buttons at the bottom, and the calculator
+    /// result its own consultation and call buttons; while typing the
     /// bar would sit on top of the keyboard.
     private func showsQuickLinks(on route: AppRoute?) -> Bool {
         if isKeyboardVisible { return false }
         switch route {
-        case .calculator, .expenseDetail: return false
+        case .calculator, .calculatorResult, .expenseDetail: return false
         default: return true
         }
     }
@@ -243,14 +251,12 @@ private struct QuickLinksBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Button { open(.calculator) } label: {
-                Label("კალკულატორი", systemImage: "plus.forwardslash.minus")
-                    .frame(maxWidth: .infinity)
+                label("კალკულატორი", systemImage: "plus.forwardslash.minus")
             }
             .buttonStyle(.borderedProminent)
 
             Button { open(.consultation) } label: {
-                Label("კონსულტაცია", systemImage: "bubble.left.and.bubble.right")
-                    .frame(maxWidth: .infinity)
+                label("კონსულტაცია", systemImage: "bubble.left.and.bubble.right")
             }
             .buttonStyle(.bordered)
         }
@@ -260,6 +266,18 @@ private struct QuickLinksBar: View {
         .padding(.vertical, 8)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
+    }
+
+    /// Long Georgian words must never break mid-word: on narrow phones (iPhone SE) the icon goes
+    /// first, then the text shrinks a little.
+    private func label(_ title: String, systemImage: String) -> some View {
+        ViewThatFits(in: .horizontal) {
+            Label(title, systemImage: systemImage)
+            Text(title)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity)
     }
 }
 

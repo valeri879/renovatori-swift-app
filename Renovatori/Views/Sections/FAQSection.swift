@@ -58,6 +58,8 @@ struct FAQAccordion: View {
                             Text(item.answer)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                // Links stand out in the accent color (the group's tint is for the chevron).
+                                .tint(.accentColor)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.top, 8)
                         } label: {

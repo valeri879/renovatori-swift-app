@@ -7,7 +7,7 @@ struct CalculatorView: View {
     @StateObject private var form = CalculatorForm()
     @State private var isSubmitting = false
     @State private var submitError: APIError?
-    @State private var submission: CalculatorSubmission?
+    @Environment(\.appNavigation) private var navigation
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -35,6 +35,7 @@ struct CalculatorView: View {
         .safeAreaInset(edge: .bottom) { stepButtons }
         .navigationTitle("კალკულატორი")
         .navigationBarTitleDisplayMode(.inline)
+        .backButtonTitle("უკან")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(item: SiteInfo.page("/calculator")) {
@@ -52,9 +53,6 @@ struct CalculatorView: View {
             if form.phoneNumber.isEmpty, let phone = auth.currentUser?.phoneNumber, phone.wholeMatch(of: /\d{9}/) != nil {
                 form.phoneNumber = phone
             }
-        }
-        .navigationDestination(item: $submission) { submission in
-            CalculatorResultView(submission: submission)
         }
     }
 
@@ -320,7 +318,9 @@ struct CalculatorView: View {
             let result: CalculationResult = try await APIClient.shared.send(
                 Endpoint(method: .post, path: "calculator", body: request)
             )
-            submission = CalculatorSubmission(request: request, result: result)
+            // Pushed onto the app's path: a separate `navigationDestination` here broke the result's
+            // own links (opening the consultation screen bounced back and forth).
+            navigation.open(.calculatorResult(CalculatorSubmission(request: request, result: result)))
         } catch let error as APIError {
             submitError = error
         } catch {

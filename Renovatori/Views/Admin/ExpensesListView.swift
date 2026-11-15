@@ -27,6 +27,7 @@ struct ExpensesListView: View {
             }
             .navigationTitle("ხარჯები")
             .navigationBarTitleDisplayMode(.inline)
+            .backButtonTitle("უკან")
             .toolbar {
                 if isAdmin {
                     ToolbarItem(placement: .primaryAction) {
