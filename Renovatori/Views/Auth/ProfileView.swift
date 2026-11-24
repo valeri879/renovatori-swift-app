@@ -82,6 +82,11 @@ struct ProfileView: View {
                 NavigationLink(value: AppRoute.passwordChange) {
                     Label("პაროლის შეცვლა", systemImage: "key")
                 }
+                if let biometry = BiometricAuth.availableKind {
+                    Toggle(isOn: biometricUnlock) {
+                        Label("\(biometry.title)-ით შესვლა", systemImage: biometry.systemImage)
+                    }
+                }
             }
 
             Section {
@@ -118,6 +123,15 @@ struct ProfileView: View {
                 }
             }
             Button("გაუქმება", role: .cancel) {}
+        }
+    }
+
+    /// Turning it on asks for Face ID first; the switch stays off if that fails.
+    private var biometricUnlock: Binding<Bool> {
+        Binding {
+            auth.isBiometricUnlockEnabled
+        } set: { enabled in
+            Task { await auth.setBiometricUnlock(enabled: enabled) }
         }
     }
 

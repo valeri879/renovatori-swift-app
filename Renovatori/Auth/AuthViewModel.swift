@@ -8,13 +8,22 @@ final class AuthViewModel: ObservableObject {
         /// Checking a stored token against `/auth/me` on launch.
         case loading
         case unauthenticated
+        /// A stored session that opens only after Face ID (the user turned it on in the profile).
+        case locked
         case authenticated(User)
     }
+
+    /// UserDefaults key for "open the account with Face ID".
+    static let biometricUnlockKey = "biometricUnlockEnabled"
 
     @Published private(set) var state: State = .loading
     /// Set by `deleteAccount`, so the deletion screen can show its result after the sign-out
     /// rebuilds the navigation stack (and the screen's own state with it).
     @Published private(set) var accountWasDeleted = false
+    /// Set after signing in with the password on a device with Face ID that hasn't turned it on yet,
+    /// so the app can offer it once.
+    @Published var shouldOfferBiometricUnlock = false
+    @Published private(set) var isBiometricUnlockEnabled = UserDefaults.standard.bool(forKey: AuthViewModel.biometricUnlockKey)
 
     private let client: APIClient
     private let tokenStore: TokenStore
@@ -29,19 +38,66 @@ final class AuthViewModel: ObservableObject {
     }
 
     /// On launch: with a stored token, confirm it (refreshing if needed) via `/auth/me`.
+    /// With Face ID turned on, the session waits for `unlockWithBiometrics()` instead.
     func restoreSession() async {
         guard tokenStore.accessToken != nil else {
+            setBiometricUnlock(false)
             state = .unauthenticated
             return
         }
+        if isBiometricUnlockEnabled, BiometricAuth.availableKind != nil {
+            state = .locked
+            return
+        }
+        await confirmStoredSession()
+    }
+
+    /// Opens the stored session after Face ID. Stays locked when it fails or is cancelled.
+    func unlockWithBiometrics() async {
+        guard state == .locked else { return }
+        guard await BiometricAuth.authenticate(reason: "ანგარიშში შესასვლელად") else { return }
+        state = .loading
+        await confirmStoredSession()
+    }
+
+    /// Turns "open the account with Face ID" on (after a Face ID check) or off.
+    @discardableResult
+    func setBiometricUnlock(enabled: Bool) async -> Bool {
+        if enabled {
+            guard await BiometricAuth.authenticate(reason: "Face ID-ით შესვლის ჩასართავად") else { return false }
+        }
+        setBiometricUnlock(enabled)
+        return true
+    }
+
+    private func setBiometricUnlock(_ enabled: Bool) {
+        isBiometricUnlockEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.biometricUnlockKey)
+        if !enabled {
+            shouldOfferBiometricUnlock = false
+        }
+    }
+
+    /// Offers Face ID after a password sign-in, unless it is on already or the device has none.
+    private func offerBiometricUnlockIfAvailable() {
+        shouldOfferBiometricUnlock = !isBiometricUnlockEnabled && BiometricAuth.availableKind != nil
+    }
+
+    /// Forgets the session on this device (tokens and the Face ID choice that unlocks them).
+    private func clearSession() {
+        tokenStore.clear()
+        setBiometricUnlock(false)
+        state = .unauthenticated
+    }
+
+    private func confirmStoredSession() async {
         do {
             try await reloadUser()
         } catch let error as APIError where error.code == APIError.networkCode {
             // Offline: keep the tokens and try again on the next launch.
             state = .unauthenticated
         } catch {
-            tokenStore.clear()
-            state = .unauthenticated
+            clearSession()
         }
     }
 
@@ -52,6 +108,7 @@ final class AuthViewModel: ObservableObject {
             body: LoginRequest(email: email, password: password, device: UIDevice.current.name)
         ))
         signIn(with: bundle)
+        offerBiometricUnlockIfAvailable()
     }
 
     func signup(firstName: String, lastName: String, phoneNumber: String, email: String, password: String) async throws {
@@ -68,6 +125,7 @@ final class AuthViewModel: ObservableObject {
             )
         ))
         signIn(with: bundle)
+        offerBiometricUnlockIfAvailable()
     }
 
     /// Fetches the latest profile; signs out if the session can no longer be refreshed.
@@ -76,8 +134,7 @@ final class AuthViewModel: ObservableObject {
             let response: MeResponse = try await client.send(Endpoint(method: .get, path: "auth/me", requiresAuth: true))
             state = .authenticated(response.user)
         } catch let error as APIError where error.code == APIError.sessionExpiredCode || error.code == "not_found" {
-            tokenStore.clear()
-            state = .unauthenticated
+            clearSession()
             throw error
         }
     }
@@ -92,15 +149,13 @@ final class AuthViewModel: ObservableObject {
                 as: LogoutResponse.self
             )
         }
-        tokenStore.clear()
-        state = .unauthenticated
+        clearSession()
     }
 
     /// After the footer switches backends: the stored tokens belong to the other server, so drop them
     /// without calling `/auth/logout` (that request would now go to the wrong backend).
     func forgetSessionForEnvironmentChange() {
-        tokenStore.clear()
-        state = .unauthenticated
+        clearSession()
     }
 
     // MARK: Password reset (signed out)
@@ -172,9 +227,8 @@ final class AuthViewModel: ObservableObject {
             ),
             as: AccountDeletionResponse.self
         )
-        tokenStore.clear()
+        clearSession()
         accountWasDeleted = true
-        state = .unauthenticated
     }
 
     private func signIn(with bundle: TokenBundle) {

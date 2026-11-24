@@ -44,7 +44,7 @@ struct SignupView: View {
                 FormFieldRow(title: "ელ-ფოსტა", error: fieldErrors[.email]) {
                     TextField("ელ-ფოსტის მისამართი", text: $email)
                         .keyboardType(.emailAddress)
-                        .textContentType(.emailAddress)
+                        .textContentType(.username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }

@@ -17,6 +17,9 @@ struct HomeView: View {
     /// Where to go after the login sheet signs the user in (the profile when nil).
     @State private var destinationAfterSignIn: AppRoute?
     @State private var webPage: WebPage?
+    /// Face ID is asked for once on launch; after that only the profile tab's button asks again.
+    @State private var didPromptBiometricUnlock = false
+    @State private var isOfferingBiometricUnlock = false
 
     var body: some View {
         TabView(selection: tabSelection) {
@@ -41,6 +44,8 @@ struct HomeView: View {
             stack(.profile) {
                 if auth.currentUser != nil {
                     ProfileView()
+                } else if auth.state == .locked {
+                    BiometricUnlockView()
                 } else {
                     LoginView()
                 }
@@ -97,6 +102,32 @@ struct HomeView: View {
                         }
                     }
             }
+        }
+        // A session kept behind Face ID opens with it as soon as the app starts.
+        .onChange(of: auth.state, initial: true) { _, state in
+            guard state == .locked, !didPromptBiometricUnlock else { return }
+            didPromptBiometricUnlock = true
+            Task { await auth.unlockWithBiometrics() }
+        }
+        // After a password sign-in, offer Face ID once; the short wait lets the login sheet close first.
+        .onChange(of: auth.shouldOfferBiometricUnlock) { _, shouldOffer in
+            guard shouldOffer else { return }
+            auth.shouldOfferBiometricUnlock = false
+            Task {
+                try? await Task.sleep(for: .milliseconds(700))
+                isOfferingBiometricUnlock = true
+            }
+        }
+        .alert(
+            "ჩავრთოთ \(BiometricAuth.availableKind?.title ?? "Face ID")-ით შესვლა?",
+            isPresented: $isOfferingBiometricUnlock
+        ) {
+            Button("ჩართვა") {
+                Task { await auth.setBiometricUnlock(enabled: true) }
+            }
+            Button("არა, მადლობა", role: .cancel) {}
+        } message: {
+            Text("შემდეგ ჯერზე ანგარიში პაროლის გარეშე გაიხსნება. ამის შეცვლა პროფილში შეგიძლიათ.")
         }
         .onChange(of: auth.currentUser?.id) { oldID, newID in
             if newID != nil, oldID == nil {
