@@ -87,7 +87,7 @@ struct EmailVerificationView: View {
             Text("გილოცავთ! თქვენი ელ-ფოსტა წარმატებით ვერიფიცირდა.")
         } actions: {
             Button("პროფილზე დაბრუნება") { dismiss() }
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
         }
     }
 

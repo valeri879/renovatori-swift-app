@@ -2,6 +2,7 @@ import SwiftUI
 
 /// "ჩვენ შესახებ" screen (`views/pages/about-page/about-page.pug`), built from standard SwiftUI components.
 struct AboutView: View {
+    @Environment(\.appNavigation) private var navigation
     /// Opens the prices screen.
     let showPrices: () -> Void
 
@@ -97,7 +98,7 @@ struct AboutView: View {
             )
 
             NavigationLink("პროექტების ნახვა", value: AppRoute.projects)
-                .buttonStyle(.bordered)
+                .secondaryButtonStyle()
 
             ProjectDashboardPreview()
         }
@@ -146,17 +147,17 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
 
             VStack(spacing: 10) {
-                NavigationLink(value: AppRoute.consultation) {
+                Button { navigation.open(.consultation) } label: {
                     Text("კონსულტაციის მოთხოვნა")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
 
                 Button(action: showPrices) {
                     Text("ფასების ნახვა")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .secondaryButtonStyle()
             }
             .controlSize(.large)
             .padding(.top, 8)
@@ -169,6 +170,7 @@ struct AboutView: View {
 
 /// Cover photo with the headline, intro, actions and the "service idea" note.
 private struct AboutHero: View {
+    @Environment(\.appNavigation) private var navigation
     var body: some View {
         Color.clear
             .frame(height: 520)
@@ -191,10 +193,10 @@ private struct AboutHero: View {
                         .foregroundStyle(.white.opacity(0.9))
 
                     HStack(spacing: 12) {
-                        NavigationLink("კონსულტაცია", value: AppRoute.consultation)
-                            .buttonStyle(.borderedProminent)
+                        Button("კონსულტაცია") { navigation.open(.consultation) }
+                            .primaryButtonStyle()
                         NavigationLink("პროექტები", value: AppRoute.projects)
-                            .buttonStyle(.bordered)
+                            .secondaryButtonStyle()
                             .tint(.white)
                     }
                     .controlSize(.large)

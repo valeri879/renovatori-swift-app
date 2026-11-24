@@ -97,7 +97,7 @@ struct ProjectDetailView: View {
                         Button("ისტორიის დამატება", systemImage: "plus") {
                             historySheet = .add
                         }
-                        .buttonStyle(.bordered)
+                        .secondaryButtonStyle()
                     }
                     if !project.description.isEmpty {
                         Divider()
@@ -296,9 +296,9 @@ struct ProjectDetailView: View {
             if canManage {
                 HStack(spacing: 8) {
                     Button("რედაქტირება") { historySheet = .edit(entry) }
-                        .buttonStyle(.bordered)
+                        .secondaryButtonStyle()
                     Button("წაშლა", role: .destructive) { pendingDelete = entry }
-                        .buttonStyle(.bordered)
+                        .secondaryButtonStyle()
                         .tint(.red)
                     if deletingID == entry.id {
                         ProgressView()

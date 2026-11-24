@@ -73,7 +73,7 @@ struct ProjectsSection: View {
                 Label("ყველა პროექტის ნახვა", systemImage: "hammer")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
             .padding(.horizontal)
         }
         .task { await latest.loadIfNeeded() }

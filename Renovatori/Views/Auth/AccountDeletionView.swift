@@ -113,7 +113,7 @@ struct AccountDeletionView: View {
             Text("თქვენი ანგარიში წაიშალა. დადასტურება გამოგზავნილია თქვენს ელ-ფოსტაზე.")
         } actions: {
             Button("მთავარ გვერდზე დაბრუნება") { navigation.goHome() }
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
         }
     }
 

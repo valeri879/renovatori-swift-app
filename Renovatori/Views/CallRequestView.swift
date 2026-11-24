@@ -159,7 +159,7 @@ struct CallRequestView: View {
             Button("მთავარ გვერდზე დაბრუნება") {
                 navigation.goHome()
             }
-            .buttonStyle(.borderedProminent)
+            .primaryButtonStyle()
         }
     }
 

@@ -35,7 +35,7 @@ struct BlogsSection: View {
                 Label("ყველა ბლოგის ნახვა", systemImage: "newspaper")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
         }
         .padding(.horizontal)
         .task { await latest.loadIfNeeded() }

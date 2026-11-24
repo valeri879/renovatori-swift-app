@@ -40,7 +40,7 @@ struct SubmitButton: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .primaryButtonStyle()
         .controlSize(.large)
         .disabled(isLoading)
         .listRowInsets(EdgeInsets())

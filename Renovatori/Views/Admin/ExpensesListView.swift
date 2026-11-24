@@ -151,12 +151,12 @@ struct ExpensesListView: View {
     private func filterChip(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         if isSelected {
             Button(title, action: action)
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
                 .buttonBorderShape(.capsule)
                 .controlSize(.small)
         } else {
             Button(title, action: action)
-                .buttonStyle(.bordered)
+                .secondaryButtonStyle()
                 .buttonBorderShape(.capsule)
                 .controlSize(.small)
         }

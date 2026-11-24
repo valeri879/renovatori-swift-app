@@ -3,6 +3,7 @@ import SwiftUI
 /// Result of `POST /calculator` (`views/pages/calculator-result-page`):
 /// the client total, price per m², what the money pays for, and the entered parameters.
 struct CalculatorResultView: View {
+    @Environment(\.appNavigation) private var navigation
     let submission: CalculatorSubmission
     @Environment(\.siteContacts) private var contacts
 
@@ -140,13 +141,13 @@ struct CalculatorResultView: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        NavigationLink(value: AppRoute.consultation) {
+        Button { navigation.open(.consultation) } label: {
             Label("კონსულტაციის დაჯავშნა", systemImage: "calendar.badge.plus")
                 .lineLimit(1)
                 .fixedSize()
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .primaryButtonStyle()
 
         if let phone = contacts.mainPhone {
             ContactButton(action: .call(phone)) {
@@ -155,7 +156,7 @@ struct CalculatorResultView: View {
                     .fixedSize()
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
         }
     }
 
@@ -164,7 +165,7 @@ struct CalculatorResultView: View {
             Label("შედეგის გაზიარება", systemImage: "square.and.arrow.up")
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
+        .secondaryButtonStyle()
         .controlSize(.large)
     }
 

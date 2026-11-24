@@ -22,7 +22,7 @@ struct ErrorStateView: View {
                 Button("თავიდან ცდა") {
                     Task { await retry() }
                 }
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
             }
         }
     }

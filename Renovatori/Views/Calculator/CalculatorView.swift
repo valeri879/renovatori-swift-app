@@ -237,7 +237,7 @@ struct CalculatorView: View {
                 Label("ოთახის დამატება", systemImage: "plus")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
             .tint(.green)
         }
     }
@@ -262,7 +262,7 @@ struct CalculatorView: View {
                 Label("აბაზანის დამატება", systemImage: "plus")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
             .tint(.green)
         }
     }
@@ -280,7 +280,7 @@ struct CalculatorView: View {
                     Text("უკან")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .secondaryButtonStyle()
             }
 
             Button {
@@ -300,7 +300,7 @@ struct CalculatorView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .primaryButtonStyle()
             .disabled(isSubmitting)
         }
         .controlSize(.large)
@@ -491,7 +491,7 @@ private struct RoomCard: View {
                 )
                 if canRemove {
                     Button("წაშლა", role: .destructive, action: remove)
-                        .buttonStyle(.bordered)
+                        .secondaryButtonStyle()
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -551,7 +551,7 @@ private struct BathroomCard: View {
                     }
                 }
                 Button("წაშლა", role: .destructive, action: remove)
-                    .buttonStyle(.bordered)
+                    .secondaryButtonStyle()
                     .frame(maxWidth: .infinity)
             }
         } label: {

@@ -90,7 +90,7 @@ struct ConsultationOrderView: View {
             Button("შესვლა") {
                 navigation.signIn(.consultationOrder(consultationType))
             }
-            .buttonStyle(.borderedProminent)
+            .primaryButtonStyle()
         }
     }
 
@@ -110,7 +110,7 @@ struct ConsultationOrderView: View {
             Button("ახალი მოთხოვნა") {
                 bookedConsultation = nil
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
         }
     }
 

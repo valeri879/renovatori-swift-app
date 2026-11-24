@@ -2,6 +2,7 @@ import SwiftUI
 
 /// "ფასები" screen (`views/pages/prices-page/prices-page.pug`), built from standard SwiftUI components.
 struct PricesView: View {
+    @Environment(\.appNavigation) private var navigation
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -42,10 +43,10 @@ struct PricesView: View {
                     .foregroundStyle(.orange)
             }
 
-            NavigationLink(value: AppRoute.calculator) {
+            Button { navigation.open(.calculator) } label: {
                 Label("გამოიყენეთ კალკულატორი", systemImage: "plus.forwardslash.minus")
             }
-            .buttonStyle(.borderedProminent)
+            .primaryButtonStyle()
             .controlSize(.small)
         }
         .padding()

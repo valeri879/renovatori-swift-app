@@ -51,7 +51,7 @@ struct ConsultationView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("კონსულტაციის დაჯავშნა", action: showPricing)
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
                 .controlSize(.large)
                 .padding(.top, 4)
         }
@@ -162,10 +162,10 @@ private struct PackageCard: View {
             Group {
                 if package.isHighlighted {
                     Button(action: book) { bookLabel }
-                        .buttonStyle(.borderedProminent)
+                        .primaryButtonStyle()
                 } else {
                     Button(action: book) { bookLabel }
-                        .buttonStyle(.bordered)
+                        .secondaryButtonStyle()
                 }
             }
             .controlSize(.large)

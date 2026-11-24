@@ -440,7 +440,7 @@ struct ExpenseDetailView: View {
                 }
                 .tint(.green)
             }
-            .buttonStyle(.borderedProminent)
+            .primaryButtonStyle()
             .controlSize(.large)
             .disabled(!expense.permissions.canAddEntries)
 

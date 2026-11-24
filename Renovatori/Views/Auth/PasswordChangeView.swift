@@ -69,7 +69,7 @@ struct PasswordChangeView: View {
             Text("თქვენი პაროლი წარმატებით შეიცვალა. დადასტურება გამოგეგზავნათ ელ-ფოსტაზე.")
         } actions: {
             Button("პროფილზე დაბრუნება") { dismiss() }
-                .buttonStyle(.borderedProminent)
+                .primaryButtonStyle()
         }
     }
 

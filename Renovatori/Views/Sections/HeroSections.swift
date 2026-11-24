@@ -36,7 +36,7 @@ struct ContactBar: View {
                         Link(destination: url) {
                             SocialIcon(link: link)
                         }
-                        .buttonStyle(.bordered)
+                        .secondaryButtonStyle()
                         .buttonBorderShape(.circle)
                         .tint(.primary)
                         .accessibilityLabel(link.title)
@@ -89,17 +89,17 @@ struct CoverView: View {
                         Button(action: showPrices) {
                             Label { Text("ფასები") } icon: { AssetIcon(name: "dollar-white", size: 16) }
                         }
-                        .buttonStyle(.borderedProminent)
+                        .primaryButtonStyle()
 
                         // Calls the main phone (the call request form outside working hours); without one
                         // it opens the contact screen, like the web.
                         if let phone = contacts.mainPhone {
                             ContactButton(action: .call(phone)) { contactLabel }
-                                .buttonStyle(.bordered)
+                                .secondaryButtonStyle()
                                 .tint(.white)
                         } else {
                             Button { navigation.open(.contact) } label: { contactLabel }
-                                .buttonStyle(.bordered)
+                                .secondaryButtonStyle()
                                 .tint(.white)
                         }
                     }

@@ -23,7 +23,7 @@ struct FAQSection: View {
                 Label("ყველა კითხვის ნახვა", systemImage: "questionmark.circle")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .secondaryButtonStyle()
         }
         .padding(.horizontal)
         .task { await model.loadIfNeeded() }
